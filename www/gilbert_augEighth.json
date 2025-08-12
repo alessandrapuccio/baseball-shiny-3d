@@ -131,7 +131,7 @@
     "seam_orientation_zx":0.8481820676,
     "seam_orientation_zy":-0.0463409638, 
     "seam_orientation_zz":0.5276738531,
-    "spin_x":-1971.673983528, x is negative backspin, y is negative gyrospin, z is sidespin
+    "spin_x":-1971.673983528,
     
     "spin_y":-191.21633234,
     "spin_z":-853.601297592,
