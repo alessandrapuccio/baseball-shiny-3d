@@ -32,21 +32,24 @@ immediateSlider <- function(inputId, label, min, max, value, step = NULL, ...) {
 customSliderWithInput <- function(inputId, label, min, max, value, step = NULL, suffix = "", ...) {
   sliderInputId <- paste0(inputId, "_slider")
   textInputId <- paste0(inputId, "_text")
-  
   div(class = "custom-slider-group",
       div(class = "slider-header",
-          span(class = "slider-label", label),
+          span(class = "slider-label", label)
+      ),
+      # Combined row for slider + input box
+      div(class = "slider-row",
+          div(class = "slider-container",
+              style = "flex: 1 1 0;",
+              immediateSlider(sliderInputId, NULL, min, max, value, step = step, ticks = FALSE, ...)
+          ),
           div(class = "slider-input-container",
               numericInput(textInputId, NULL, value = value, min = min, max = max, step = step, width = "60px"),
               if(suffix != "") span(class = "slider-suffix", suffix)
           )
-      ),
-      div(class = "slider-container",
-          immediateSlider(sliderInputId, NULL, min, max, value, step = step, 
-                          ticks = FALSE, ...)
       )
   )
 }
+
 
 ui <- fluidPage(
   useShinyjs(),
@@ -67,16 +70,22 @@ ui <- fluidPage(
     # Custom CSS for horizontal layout
     tags$style(HTML("
       .control-panel {
+        transform: scale(0.7);          /* Shrink to 80% size */
+        transform-origin: top left;     /* Anchor shrinking from the top-left corner */
+
         background: #f5f5f5;
         border: 1px solid #ddd;
         border-radius: 4px;
         padding: 15px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      
         display: flex;
-        gap: 55px;
-        align-items: flex-start;
-        min-width: 700px;
+        flex-direction: column;
+        gap: 20px;
+        align-items: stretch;
+        min-width: 270px;
       }
+
       
       .control-section {
         display: flex;
@@ -121,14 +130,14 @@ ui <- fluidPage(
       }
       
       .custom-slider-group {
-        margin-bottom: 15px;
+        margin-bottom: 10px;
       }
       
       .slider-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 8px;
+        margin-bottom: 3px;
       }
       
       .slider-label {
@@ -215,17 +224,41 @@ ui <- fluidPage(
         top: 25px !important;
       }
       
+      /* NEW NE NE */
+      .custom-slider-group .slider-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;      /* space between slider and input box */
+        margin-bottom: 8px;
+      }
+      
+      .custom-slider-group .slider-container {
+        flex: 1 1 0;
+        min-width: 200px;  /* controls slider width, adjust as needed */
+        max-width: 220px;  /* optional, restrict max width */
+      }
+      
+      .custom-slider-group .slider-input-container {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        margin-left: 4px;  /* space between slider and input */
+      }
+
       .play-button {
         background: #005c5c;
         color: white;
         border: none;
         border-radius: 4px;
-        padding: 12px 20px;
+        padding: 10px 16px;
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
-        width: 100%;
+        width: 220px;       
+        display: block;       
+        margin: 0 auto;      
       }
+
 
       # .play-button:hover {
       #   background: #004545;
@@ -290,11 +323,10 @@ ui <- fluidPage(
     
     # Pitch Controls Section
     div(class = "control-section pitch-controls",
-        h4("Select Pitch", style="font-weight:bold;"),
+        h5("Select Pitch", class = "section-title"),
         div(class = "pitch-select",
             selectInput("pitch_uid", NULL, choices = pitch_choices, selected = pitch_choices[1])
         ),
-        h4("Play Animation", style="font-weight:bold;"),
         actionButton("play_pause_btn", "Pause", class = "play-button")
     ),
     
