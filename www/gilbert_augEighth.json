@@ -1,4 +1,27 @@
 [
+    {
+      
+    "PitchNumber":0,
+    "game_id":"717072",
+    "dtUpdateDate":1751826310760,
+
+
+    "ExitSpeed":null,
+    "PitchType":"FA",
+    "PitchUID":"0-444682E9-2F89-4793-BB95-76536154E8F1",
+
+
+    "spin_backspin":90,
+    "spin_sidespin":0,
+    "spin_gyrospin":0,
+    
+    "spin_efficiency":0.996862069,
+    "seam_orientation_lat":-0.5239371472,
+    "seam_orientation_lon":-159.9581448558,
+    "SpinAxis_inf":197.0700016866,
+    "SpinAxis_meas":206.654861845
+
+  },
   {
     "game_id":"717072",
     "dtUpdateDate":1751826310760,

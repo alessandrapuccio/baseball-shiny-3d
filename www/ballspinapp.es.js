@@ -8681,7 +8681,7 @@ function dp() {
   ] });
 }
 function pp({ spinRate: c, playing: i, spinAxis: s, seam_orientation_lat: m, seam_orientation_lon: o, userRotX: E, userRotY: C, useSeamOrientation: T }) {
-  const r = ti(Wm, "models/baseball.gltf"), H = _e.useRef(), _ = _e.useRef(), z = _e.useRef(), { invalidate: g } = Vd();
+  const r = ti(Wm, "/models/baseball.gltf"), H = _e.useRef(), _ = _e.useRef(), z = _e.useRef(), { invalidate: g } = Vd();
   return bl(() => {
     r.scene && r.scene.rotation.set(Math.PI / 2, 3 * Math.PI / 2, 0);
   }, [r]), bl(() => {
@@ -8732,7 +8732,7 @@ function pp({ spinRate: c, playing: i, spinAxis: s, seam_orientation_lat: m, sea
 function yp() {
   const [c, i] = ue([]), [s, m] = ue(null), [o, E] = ue(!0), [C, T] = ue(null), [r, H] = ue(0), [_, z] = ue(0), [g, R] = ue(null);
   bl(() => {
-    fetch("gilbert_augEighth.json").then((Y) => Y.json()).then((Y) => {
+    fetch("/gilbert_augEighth.json").then((Y) => Y.json()).then((Y) => {
       i(Y || []), Y && Y.length > 0 && m(Y[0].PitchUID);
     });
   }, []), bl(() => {
