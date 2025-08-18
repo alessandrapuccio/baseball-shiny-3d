@@ -16,8 +16,8 @@
     "spin_gyrospin":0,
     
     "spin_efficiency":0.996862069,
-    "seam_orientation_lat":-0.5239371472,
-    "seam_orientation_lon":-159.9581448558,
+    "seam_orientation_lat":-100000000,
+    "seam_orientation_lon":-4500000000,
     "SpinAxis_inf":197.0700016866,
     "SpinAxis_meas":206.654861845
 

@@ -48,8 +48,8 @@ ui <- fluidPage(
     # Spin Axis Section
     div(class = "control-section spin-controls",
         h5("Spin Axis", class = "section-title"),
-        customSliderWithInput("spinTilt", "Tilt", min = 0, max = 360, value = 0, step = 1, suffix = "°"),
-        customSliderWithInput("spinGyro", "Gyro", min = 0, max = 360, value = 0, step = 1, suffix = "°")
+        customSliderWithInput("spinTilt", "Gyro", min = 0, max = 360, value = 0, step = 1, suffix = "°"),
+        customSliderWithInput("spinGyro", "Tilt", min = 0, max = 360, value = 0, step = 1, suffix = "°")
     ),
     
     # Seam Orientation Section
@@ -107,13 +107,13 @@ server <- function(input, output, session) {
   update_sliders_for_pitch <- function(pitch_uid) {
     selected_pitch <- get_pitch_by_uid(pitch_uid)
     pitch_number <- selected_pitch$PitchNumber
-    
-    # spin axis values 
+
+    # spin axis values
     spin_x <- selected_pitch$spin_backspin
     spin_y <- selected_pitch$spin_sidespin
     spin_z <- -selected_pitch$spin_gyrospin  # keep negative
-    
-    # Normalize 
+
+    # Normalize
     magnitude <- sqrt(spin_x^2 + spin_y^2 + spin_z^2)
     if (magnitude > 0) {
       spin_x <- spin_x / magnitude
@@ -121,16 +121,16 @@ server <- function(input, output, session) {
       spin_z <- spin_z / magnitude
     }
     cat("Normalized spin vector (UID", pitch_uid, "): x =", spin_x, "y =", spin_y, "z =", spin_z, "\n")
-    
+
     # Calculate tilt and gyro - MATCH REACT LOGIC
     tilt <- acos(spin_x) * 180 / pi
     gyro <- atan2(spin_y, spin_z) * 180 / pi
-    
+
     # gyro 0-360 range
     gyro <- (gyro + 360) %% 360
-    
+
     cat("Calculated for UID", pitch_uid, ": tilt =", tilt, "gyro =", gyro, "\n")
-    
+
     # Update both sliders and text inputs
     updateSliderInput(session, "spinTilt_slider", value = round(tilt, 1))
     updateNumericInput(session, "spinTilt_text", value = round(tilt, 1))
@@ -142,6 +142,7 @@ server <- function(input, output, session) {
     updateNumericInput(session, "ballY_text", value = 0)
   }
   
+ 
   # Initialize sliders with first pitch data when app starts
   observe({
     if (length(pitch_data) > 0) {
@@ -178,6 +179,7 @@ server <- function(input, output, session) {
       ballX = input$ballX_slider,
       ballY = input$ballY_slider
     )
+    cat( "------------- \n")
     cat("  spinTilt =", vals$spinTilt, "\n")
     cat("  spinGyro =", vals$spinGyro, "\n")
     cat("  ballX =", vals$ballX, "\n")
