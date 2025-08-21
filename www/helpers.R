@@ -19,9 +19,11 @@ immediateSlider <- function(inputId, label, min, max, value, step = NULL, ...) {
 }
 
 # Custom slider with input field
-customSliderWithInput <- function(inputId, label, min, max, value, step = NULL, suffix = "", ...) {
+customSliderWithInput <- function(inputId, label, min, max, value, step = NULL, suffix = "", show_time = FALSE, ...) {
   sliderInputId <- paste0(inputId, "_slider")
   textInputId <- paste0(inputId, "_text")
+  timeInputId <- paste0(inputId, "_time")
+  
   div(class = "custom-slider-group",
       div(class = "slider-header",
           span(class = "slider-label", label)
@@ -36,6 +38,83 @@ customSliderWithInput <- function(inputId, label, min, max, value, step = NULL, 
               numericInput(textInputId, NULL, value = value, min = min, max = max, step = step, width = "60px"),
               if(suffix != "") span(class = "slider-suffix", suffix)
           )
-      )
+      ),
+      # Time input on separate line if enabled
+      if (show_time) {
+        div(class = "slider-time-container",
+            style = "display: flex; flex-direction: column; align-items: flex-start;",
+            span(class = "time-label", "Clock Input:"),
+            div(style = "display: inline-block;",
+                textInput(
+                  "spinTilt_time", NULL,
+                  value = format_time(0, 0),
+                  placeholder = "HH:MM",
+                  width = "110px"
+                )
+            ),
+        )
+        
+        
+      }
   )
+}
+
+
+axis_to_tilt_time_simple <- function(degrees) {
+  # Since we've already handled the display transformation in the main code,
+  # degrees here should be the display degrees that match the visual rod position
+  
+  # NEW Clock mapping: 0°→6:00, 90°→9:00, 180°→12:00, 270°→3:00
+  # Convert degrees directly to clock hours
+  clock_hour_float <- (degrees / 30 + 6) %% 12
+  
+  hours <- floor(clock_hour_float)
+  if (hours == 0) hours <- 12
+  
+  # Calculate minutes from fractional part
+  minutes_exact <- (clock_hour_float - floor(clock_hour_float)) * 60
+  minutes <- round(minutes_exact, 2)
+  
+  return(list(hours = hours, minutes = minutes))
+}
+
+tilt_time_to_axis_deg_simple <- function(hours, minutes) {
+  # Convert clock time back to display degrees
+  hour_value <- (hours %% 12) + (minutes / 60.0)
+  if (hours == 12) hour_value <- minutes / 60.0
+  
+  # Convert back to display tilt using NEW mapping
+  # Reverse of: clock_hour_float = (degrees / 30 + 6) % 12
+  display_degrees <- ((hour_value - 6) * 30 + 360) %% 360
+  
+  return(display_degrees)
+}
+
+
+# Format time for display (handle decimal minutes)
+format_time <- function(hours, minutes, show_seconds = FALSE) {
+  if (show_seconds && minutes != floor(minutes)) {
+    mins <- floor(minutes)
+    secs <- round((minutes - mins) * 60)
+    sprintf("%02d:%02d:%02d", hours, mins, secs)
+  } else {
+    sprintf("%02d:%02d", hours, floor(minutes))
+  }
+}
+
+parse_time <- function(time_string) {
+  if (grepl(":", time_string)) {
+    parts <- strsplit(time_string, ":")[[1]]
+    if (length(parts) >= 2) {
+      hours <- as.numeric(parts[1])
+      minutes <- as.numeric(parts[2])
+      seconds <- if(length(parts) >= 3) as.numeric(parts[3]) else 0
+      
+      # Validate ranges
+      if (hours >= 1 && hours <= 12 && minutes >= 0 && minutes < 60) {
+        return(list(hours = hours, minutes = minutes + seconds/60))
+      }
+    }
+  }
+  return(NULL)
 }

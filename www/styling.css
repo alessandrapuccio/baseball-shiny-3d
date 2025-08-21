@@ -1,5 +1,5 @@
 .control-panel {
-  transform: scale(0.7);          /* Shrink to 80% size */
+  transform: scale(0.75);          /* Shrink to 80% size */
   transform-origin: top left;     /* Anchor shrinking from the top-left corner */
 
   background: #f5f5f5;
@@ -232,3 +232,57 @@
   padding: 2px 0;
   top: 15px !important;
 }
+
+
+/* Time input styling - matches your existing design */
+.slider-time-container {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 4px;
+}
+
+.slider-time-container .form-group {
+  margin: 0;
+}
+
+.slider-time-container input {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 10px 12px;      /* Increase padding for more height */
+  font-size: 24px;         /* Bigger font size */
+  text-align: center;
+  color: #333;
+  height: 65px;            /* Increase height */
+  width: 140px !important; /* Increase width */
+}
+
+.slider-time-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: 5px;
+  padding-left: 0;
+}
+
+.slider-time-row .slider-time-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 0;
+}
+
+.time-label {
+  font-size: 15px;
+  font-weight:bold;
+  min-width: 35px;
+}
+
+.clock-input {
+  font-size: 20px;
+  height: 35px;
+  width: 90px !important;
+  padding: 5px 5px;
+}
+
