@@ -41,31 +41,29 @@ customSliderWithInput <- function(inputId, label, min, max, value, step = NULL, 
       ),
       # Time input on separate line if enabled
       if (show_time) {
-        div(class = "slider-time-container",
-            style = "display: flex; flex-direction: column; align-items: flex-start;",
-            span(class = "time-label", "Clock Input:"),
-            div(style = "display: inline-block;",
-                textInput(
-                  "spinTilt_time", NULL,
-                  value = format_time(0, 0),
-                  placeholder = "HH:MM",
-                  width = "110px"
-                )
-            ),
+        div(
+          class = "slider-time-container",
+          # style = "display: flex; flex-direction: column; align-items: center;",
+          
+          # Wrap label + input in one container
+          div(
+            # style = "display: flex; flex-direction: column; align-items: center;",
+            span(class = "time-label", "Tilt Clock Input:"),
+            textInput(
+              "spinTilt_time", NULL,
+              value = format_time(0, 0),
+              placeholder = "HH:MM",
+              width = "100px"
+            )
+          )
         )
-        
-        
       }
   )
 }
 
 
 axis_to_tilt_time_simple <- function(degrees) {
-  # Since we've already handled the display transformation in the main code,
-  # degrees here should be the display degrees that match the visual rod position
-  
-  # NEW Clock mapping: 0°→6:00, 90°→9:00, 180°→12:00, 270°→3:00
-  # Convert degrees directly to clock hours
+
   clock_hour_float <- (degrees / 30 + 6) %% 12
   
   hours <- floor(clock_hour_float)
