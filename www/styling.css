@@ -39,6 +39,13 @@
   flex-direction: column;
   gap: 15px;
 }
+.header-panel {
+  background: white;  /* same as control/stats panels */
+  border-radius: 8px;
+  padding: 5px;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
+  font-weight: bold;
+}
 
 /* Card Version Styling */
 .stats-cards {

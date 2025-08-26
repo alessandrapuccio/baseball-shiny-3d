@@ -61,6 +61,8 @@ ui <- fluidPage(
         actionButton("play_pause_btn", "Pause", class = "play-button")
     ),
     
+
+
     # Spin Axis Section
     div(class = "control-section spin-controls",
         h5("Axis of Rotation", class = "section-title"),
@@ -76,6 +78,17 @@ ui <- fluidPage(
         customSliderWithInput("ballY", "Top", min = -90, max = 90, value = 0, step = 1, suffix = "°")
     ),
   ),
+  
+  absolutePanel(
+    top = 10, left = "50%", width = 200, height = 40,
+    style = "transform: translateX(-50%);",
+    class = "header-panel",
+    div(
+      class = "header-label",
+      style = "height: 100%; display: flex; align-items: center; justify-content: center;",
+      "Pitcher's Perspective"
+    )
+  ),
 
   # Stats panel
     absolutePanel(
@@ -83,7 +96,7 @@ ui <- fluidPage(
       class = "stats-panel",
       
       div(class = "stats-section",
-          h5("Pitch Statistics", class = "section-title"),
+          h5("Pitch Shape", class = "section-title"),
           div(class = "stats-cards",
               div(class = "stat-card",
                   div(class = "stat-label", "Velo"),
@@ -281,7 +294,6 @@ server <- function(input, output, session) {
     z <- sin(gyro_rad)
     return(c(x, y, z))
   }
-  
   update_sliders_for_pitch <- function(pitch_uid) {
     selected_pitch <- get_pitch_by_uid(pitch_uid)
     if (is.null(selected_pitch)) return()
@@ -294,14 +306,35 @@ server <- function(input, output, session) {
     tilt_gyro <- calculate_tilt_gyro_from_vector(spin_x, spin_y, spin_z)
     original_tilt(tilt_gyro$tilt)
     display_tilt <- (360 - tilt_gyro$tilt + 90) %% 360
+    
+    # Update spin controls
     updateSliderInput(session, "spinTilt_slider", value = round(display_tilt, 1))
     updateNumericInput(session, "spinTilt_text", value = round(display_tilt, 1))
     updateSliderInput(session, "spinGyro_slider", value = round(tilt_gyro$gyro, 1))
     updateNumericInput(session, "spinGyro_text", value = round(tilt_gyro$gyro, 1))
-    updateSliderInput(session, "ballX_slider", value = 0)
-    updateNumericInput(session, "ballX_text", value = 0)
-    updateSliderInput(session, "ballY_slider", value = 0)
-    updateNumericInput(session, "ballY_text", value = 0)
+    
+    # Update seam orientation controls with actual pitch values
+    seam_lat <- if(!is.null(selected_pitch$seam_orientation_lat) && !is.na(selected_pitch$seam_orientation_lat)) {
+      selected_pitch$seam_orientation_lat
+    } else {
+      0
+    }
+    seam_lon <- if(!is.null(selected_pitch$seam_orientation_lon) && !is.na(selected_pitch$seam_orientation_lon)) {
+      selected_pitch$seam_orientation_lon
+    } else {
+      0
+    }
+    
+    # Convert longitude for display (add 90 degrees with wrapping)
+    display_lon <- ((seam_lon + 90 + 180) %% 360) - 180
+    
+    # Convert latitude for display (negative version)
+    display_lat <- -seam_lat
+    
+    updateSliderInput(session, "ballX_slider", value = round(display_lon, 1))
+    updateNumericInput(session, "ballX_text", value = round(display_lon, 1))
+    updateSliderInput(session, "ballY_slider", value = round(display_lat, 1))
+    updateNumericInput(session, "ballY_text", value = round(display_lat, 1))
   }
   
   # Tilt + gyro updates
@@ -309,16 +342,10 @@ server <- function(input, output, session) {
     vals <- list(
       spinTilt = input$spinTilt_slider,
       spinGyro = input$spinGyro_slider,
-      ballX = input$ballX_slider,
-      ballY = input$ballY_slider
+      ballX = ((input$ballX_slider - 90 + 180) %% 360) - 180,  # Convert display longitude back to data longitude with wrapping
+      ballY = -input$ballY_slider       # Convert display latitude back to data latitude (negative)
     )
-    if (!is.null(vals$spinTilt) && !is.null(vals$spinGyro) && !is.null(original_tilt())) {
-      user_display_tilt <- vals$spinTilt
-      actual_tilt <- (360 - (user_display_tilt - 90)) %% 360
-      new_vector <- calculate_vector_from_tilt_gyro(actual_tilt, vals$spinGyro)
-      vals$spinVectorX <- new_vector[1]
-      vals$spinVectorY <- new_vector[2]
-      vals$spinVectorZ <- new_vector[3]
+    if (!is.null(vals$spinTilt)) {
       session$sendCustomMessage("slider_update", vals)
     }
   })
