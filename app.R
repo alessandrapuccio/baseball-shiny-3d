@@ -249,18 +249,18 @@ server <- function(input, output, session) {
     }
   })
   
-  # Send slider values to JS
-  observe({
-    vals <- list(
-      spinTilt = input$spinTilt_slider,
-      spinGyro = input$spinGyro_slider,
-      ballX = input$ballX_slider,
-      ballY = input$ballY_slider
-    )
-    if (!is.null(vals$spinTilt)) {
-      session$sendCustomMessage("slider_update", vals)
-    }
-  })
+  # # Send slider values to JS
+  # observe({
+  #   vals <- list(
+  #     spinTilt = input$spinTilt_slider,
+  #     spinGyro = input$spinGyro_slider,
+  #     ballX = input$ballX_slider,
+  #     ballY = input$ballY_slider
+  #   )
+  #   if (!is.null(vals$spinTilt)) {
+  #     session$sendCustomMessage("slider_update", vals)
+  #   }
+  # })
   
   # Helpers
   get_pitch_by_uid <- function(pitch_uid) {
@@ -294,6 +294,7 @@ server <- function(input, output, session) {
     z <- sin(gyro_rad)
     return(c(x, y, z))
   }
+  
   update_sliders_for_pitch <- function(pitch_uid) {
     selected_pitch <- get_pitch_by_uid(pitch_uid)
     if (is.null(selected_pitch)) return()
@@ -337,6 +338,7 @@ server <- function(input, output, session) {
     updateNumericInput(session, "ballY_text", value = round(display_lat, 1))
   }
   
+  
   # Tilt + gyro updates
   observe({
     vals <- list(
@@ -344,8 +346,15 @@ server <- function(input, output, session) {
       spinGyro = input$spinGyro_slider,
       ballX = ((input$ballX_slider - 90 + 180) %% 360) - 180,  # Convert display longitude back to data longitude with wrapping
       ballY = -input$ballY_slider       # Convert display latitude back to data latitude (negative)
+      
     )
-    if (!is.null(vals$spinTilt)) {
+    if (!is.null(vals$spinTilt) && !is.null(vals$spinGyro) && !is.null(original_tilt())) {
+      user_display_tilt <- vals$spinTilt
+      actual_tilt <- (360 - (user_display_tilt - 90)) %% 360
+      new_vector <- calculate_vector_from_tilt_gyro(actual_tilt, vals$spinGyro)
+      vals$spinVectorX <- new_vector[1]
+      vals$spinVectorY <- new_vector[2]
+      vals$spinVectorZ <- new_vector[3]
       session$sendCustomMessage("slider_update", vals)
     }
   })
