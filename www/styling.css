@@ -261,6 +261,12 @@
   margin: 10px auto 15px auto;      
 }
 
+.pause-orientation-button {
+   background: #005c5c;
+   color: white;
+   width: 200px;
+}
+
 .play-button,
 .play-button:focus,
 .play-button:active,

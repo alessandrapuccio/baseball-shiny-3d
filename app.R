@@ -34,6 +34,9 @@ ui <- fluidPage(
       Shiny.addCustomMessageHandler('play_toggle', function(val) {
         window.postMessage({ type: 'play_toggle', value: val }, '*');
       });
+      Shiny.addCustomMessageHandler('reset_spin_rotation', function(val) {
+        window.postMessage({ type: 'reset_spin_rotation', value: val }, '*');
+      });
       Shiny.addCustomMessageHandler('updateStatCard', function(data) {
         var element = document.getElementById(data.id);
         if (element) {
@@ -42,7 +45,7 @@ ui <- fluidPage(
       });
     "))
   ),
-  
+
   tags$div(id = "root", style = "width: 100vw; height: 100vh;"),
   
   absolutePanel(
@@ -72,23 +75,24 @@ ui <- fluidPage(
     ),
     
     # Seam Orientation Section
+    # div(class = "control-section rotation-controls",
+    #     h5("Seam Orientation", class = "section-title"),
+    #     customSliderWithInput("ballX", "Longitude / Top", min = -180, max = 180, value = 0, step = 1, suffix = "°"),
+    #     customSliderWithInput("ballY", "Latitude / Front", min = -90, max = 90, value = 0, step = 1, suffix = "°")
+    # ),
+    # Seam Orientation Section
     div(class = "control-section rotation-controls",
         h5("Seam Orientation", class = "section-title"),
-        customSliderWithInput("ballX", "Front", min = -180, max = 180, value = 0, step = 1, suffix = "°"),
-        customSliderWithInput("ballY", "Top", min = -90, max = 90, value = 0, step = 1, suffix = "°")
-    ),
-  ),
-  
-  absolutePanel(
-    top = 10, left = "50%", width = 200, height = 40,
-    style = "transform: translateX(-50%);",
-    class = "header-panel",
-    div(
-      class = "header-label",
-      style = "height: 100%; display: flex; align-items: center; justify-content: center;",
-      "Pitcher's Perspective"
+        div(style = "text-align: center; margin-bottom: 15px;",
+            actionButton("pause_for_orientation", "Pause for orientation", 
+                         class = "pause-orientation-button", 
+                         style = "width: 85%;")
+        ),
+        customSliderWithInput("ballX", "Longitude / Top", min = -180, max = 180, value = 0, step = 1, suffix = "°"),
+        customSliderWithInput("ballY", "Latitude / Front", min = -90, max = 90, value = 0, step = 1, suffix = "°")
     )
   ),
+  
 
   # Stats panel
     absolutePanel(
@@ -327,10 +331,10 @@ server <- function(input, output, session) {
     }
     
     # Convert longitude for display (add 90 degrees with wrapping)
-    display_lon <- ((seam_lon + 90 + 180) %% 360) - 180
+    display_lon <- seam_lon #((seam_lon + 90 + 180) %% 360) - 180
     
     # Convert latitude for display (negative version)
-    display_lat <- -seam_lat
+    display_lat <- seam_lat
     
     updateSliderInput(session, "ballX_slider", value = round(display_lon, 1))
     updateNumericInput(session, "ballX_text", value = round(display_lon, 1))
@@ -344,8 +348,8 @@ server <- function(input, output, session) {
     vals <- list(
       spinTilt = input$spinTilt_slider,
       spinGyro = input$spinGyro_slider,
-      ballX = ((input$ballX_slider - 90 + 180) %% 360) - 180,  # Convert display longitude back to data longitude with wrapping
-      ballY = -input$ballY_slider       # Convert display latitude back to data latitude (negative)
+      ballX = input$ballX_slider,#((input$ballX_slider - 90 + 180) %% 360) - 180,  # Convert display longitude back to data longitude with wrapping
+      ballY = input$ballY_slider#-input$ballY_slider       # Convert display latitude back to data latitude
       
     )
     if (!is.null(vals$spinTilt) && !is.null(vals$spinGyro) && !is.null(original_tilt())) {
@@ -357,6 +361,18 @@ server <- function(input, output, session) {
       vals$spinVectorZ <- new_vector[3]
       session$sendCustomMessage("slider_update", vals)
     }
+  })
+  
+  
+  # Handle "Pause for orientation" button
+  observeEvent(input$pause_for_orientation, {
+    # Pause the animation
+    playing(FALSE)
+    updateActionButton(session, "play_pause_btn", label = "Play")
+    session$sendCustomMessage("play_toggle", FALSE)
+    
+    # Reset spin rotations to identity
+    session$sendCustomMessage("reset_spin_rotation", TRUE)
   })
   
   # Play/pause button
