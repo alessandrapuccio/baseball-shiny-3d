@@ -43,6 +43,9 @@ ui <- fluidPage(
           element.textContent = data.value;
         }
       });
+      Shiny.addCustomMessageHandler('clock_toggle', function(showClock) {
+        window.postMessage({ type: 'clock_toggle', value: showClock }, '*');
+      });
     "))
   ),
 
@@ -63,28 +66,26 @@ ui <- fluidPage(
         ),
         actionButton("play_pause_btn", "Pause", class = "play-button")
     ),
+
     
-
-
     # Spin Axis Section
     div(class = "control-section spin-controls",
         h5("Axis of Rotation", class = "section-title"),
         customSliderWithInput("spinGyro", "Gyro", min = -90, max = 90, value = 0, step = 1, suffix = "°"),
         customSliderWithInput("spinTilt", "Spin Axis", min = 0, max = 360, value = 0, step = 1, suffix = "°", show_time = TRUE)
-
+      
     ),
-    
-    # Seam Orientation Section
-    # div(class = "control-section rotation-controls",
-    #     h5("Seam Orientation", class = "section-title"),
-    #     customSliderWithInput("ballX", "Longitude / Top", min = -180, max = 180, value = 0, step = 1, suffix = "°"),
-    #     customSliderWithInput("ballY", "Latitude / Front", min = -90, max = 90, value = 0, step = 1, suffix = "°")
-    # ),
-    # Seam Orientation Section
+
+    # show clock button
+    div(class = "compact-checkbox", style = "text-align: center;",
+        checkboxInput("show_clock", "Show Clock", value = TRUE, width = "100%")
+    ),
+
+
     div(class = "control-section rotation-controls",
         h5("Seam Orientation", class = "section-title"),
         div(style = "text-align: center; margin-bottom: 15px;",
-            actionButton("pause_for_orientation", "Pause for orientation", 
+            actionButton("pause_for_orientation", "Press Before Reorientation", 
                          class = "pause-orientation-button", 
                          style = "width: 85%;")
         ),
@@ -135,10 +136,8 @@ server <- function(input, output, session) {
   playing <- reactiveVal(FALSE)
   original_tilt <- reactiveVal(0)
   current_pitch <- reactiveVal(NULL)
-  
-  
   output$pitchTypeUI <- renderUI({
-    req(input$pitcher)
+    req(input$pitcher != "")
     
     pitch_rows <- pitch_data[pitch_data$Pitcher == input$pitcher, ]
     
@@ -152,7 +151,24 @@ server <- function(input, output, session) {
     )
   })
   
-
+  
+  # output$pitchTypeUI <- renderUI({
+  #   req(input$pitcher)
+  #   
+  #   pitch_rows <- pitch_data[pitch_data$Pitcher == input$pitcher, ]
+  #   
+  #   # Map abbreviations to full names
+  #   pitch_labels <- sapply(pitch_rows$PitchType, function(pt) abbrevs[[pt]])
+  #   
+  #   div(style = "margin-top: 10px;",   
+  #       selectInput("pitch_type", "Pitch Type:",
+  #                   choices = setNames(pitch_rows$PitchUID, pitch_labels),
+  #                   selected = pitch_rows$PitchUID[1])
+  #   )
+  # })
+  
+  
+  
   # Update individual stat values for card display
   observe({
     pitch <- current_pitch()
@@ -253,18 +269,14 @@ server <- function(input, output, session) {
     }
   })
   
-  # # Send slider values to JS
-  # observe({
-  #   vals <- list(
-  #     spinTilt = input$spinTilt_slider,
-  #     spinGyro = input$spinGyro_slider,
-  #     ballX = input$ballX_slider,
-  #     ballY = input$ballY_slider
-  #   )
-  #   if (!is.null(vals$spinTilt)) {
-  #     session$sendCustomMessage("slider_update", vals)
-  #   }
-  # })
+
+  # Handle clock visibility toggle
+  observeEvent(input$show_clock, {
+    cat("Clock toggle clicked, value:", input$show_clock, "\n")
+    cat("Sending clock_toggle message to JavaScript\n")
+    session$sendCustomMessage("clock_toggle", input$show_clock)
+  })
+
   
   # Helpers
   get_pitch_by_uid <- function(pitch_uid) {
