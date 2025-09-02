@@ -17,7 +17,7 @@ abbrevs <- list(
   "FC" = "Cutter",
   "FS" = "Splitter"
 )
-  
+
 ui <- fluidPage(
   useShinyjs(),
   tags$head(
@@ -46,45 +46,53 @@ ui <- fluidPage(
       Shiny.addCustomMessageHandler('clock_toggle', function(showClock) {
         window.postMessage({ type: 'clock_toggle', value: showClock }, '*');
       });
-    "))
+      Shiny.addCustomMessageHandler('field_toggle', function(showField) {
+        window.postMessage({ type: 'field_toggle', value: showField }, '*');
+      });
+    ")),
+ 
   ),
-
+  
   tags$div(id = "root", style = "width: 100vw; height: 100vh;"),
   
   absolutePanel(
-    top = 20, left = 20, zIndex = 1000, draggable = FALSE,
+    top = 20, left = 25, zIndex = 1000, draggable = FALSE,
     class = "control-panel",
     
     # Pitch Controls Section
     div(class = "control-section pitch-controls",
-        h5("Select Pitch", class = "section-title"),
+        h5("SELECT PITCH", class = "section-title"),
         div(class = "pitch-select",
-            selectInput("pitcher", "Pitcher:",
+            selectInput("pitcher", "Select Pitcher and Pitch Type:",
                         choices = unique(pitch_data$Pitcher),
                         selected = unique(pitch_data$Pitcher)[1]),
             uiOutput("pitchTypeUI")
         ),
-        actionButton("play_pause_btn", "Pause", class = "play-button")
+        div(class = "button-group",
+            actionButton("play_pause_btn", "Play", class = "play-button"),
+            actionButton("reset_btn", "Reset", class = "reset-button")
+        )
     ),
-
+    
     
     # Spin Axis Section
     div(class = "control-section spin-controls",
-        h5("Axis of Rotation", class = "section-title"),
+        h5("ADJUST AXIS OF ROTATION", class = "section-title"),
         customSliderWithInput("spinGyro", "Gyro", min = -90, max = 90, value = 0, step = 1, suffix = "°"),
-        customSliderWithInput("spinTilt", "Spin Axis", min = 0, max = 360, value = 0, step = 1, suffix = "°", show_time = TRUE)
-      
+        customSpinAxisSlider("spinTilt", "Spin Axis", min = 0, max = 360, value = 0, step = 1, suffix = "°", show_slider = FALSE, show_time = TRUE)        
     ),
-
+    
     # show clock button
     div(class = "compact-checkbox", style = "text-align: center;",
-        checkboxInput("show_clock", "Show Clock", value = TRUE, width = "100%")
+        checkboxInput("show_clock", "Show Clock", value = TRUE),
+        checkboxInput("show_field", "Show Field", value = TRUE)
+        
     ),
-
-
+    
+    
     div(class = "control-section rotation-controls",
-        h5("Seam Orientation", class = "section-title"),
-        div(style = "text-align: center; margin-bottom: 15px;",
+        h5("ADJUST SEAM ORIENTATION", class = "section-title"),
+        div(style = "text-align: center;",
             actionButton("pause_for_orientation", "Press Before Reorientation", 
                          class = "pause-orientation-button", 
                          style = "width: 85%;")
@@ -94,40 +102,44 @@ ui <- fluidPage(
     )
   ),
   
-
+  
   # Stats panel
-    absolutePanel(
-      top = 30, right = 20, zIndex = 1000, draggable = FALSE,
-      class = "stats-panel",
-      
-      div(class = "stats-section",
-          h5("Pitch Shape", class = "section-title"),
-          div(class = "stats-cards",
-              div(class = "stat-card",
-                  div(class = "stat-label", "Velo"),
-                  div(class = "stat-value", id = "velo_value", "0.0 mph")
-              ),
-              div(class = "stat-card",
-                  div(class = "stat-label", "Spin Rate"),
-                  div(class = "stat-value", id = "spin_rate_value", "0 rpm")
-              ),
-              div(class = "stat-card",
-                  div(class = "stat-label", "Induced Vert Break"),
-                  div(class = "stat-value", id = "vert_break_value", "0.0\"")
-              ),
-              div(class = "stat-card",
-                  div(class = "stat-label", "Horz Break"),
-                  div(class = "stat-value", id = "horz_break_value", "0.0\"")
-              ),
-              div(class = "stat-card",
-                  div(class = "stat-label", "Inferred Spin Direction"),
-                  div(class = "stat-value", id = "spin_direction_value", "0°")
-              )
-          )
-      )
-      
-      
-      
+  absolutePanel(
+    top = 30, right = 20, zIndex = 1000, draggable = FALSE,
+    class = "stats-panel",
+    
+    div(class = "stats-section",
+        h5("Pitch Shape", class = "section-title"),
+        div(class = "stats-cards",
+            div(class = "stat-card",
+                div(class = "stat-label", "Velo"),
+                div(class = "stat-value", id = "velo_value", "0.0 mph")
+            ),
+            div(class = "stat-card",
+                div(class = "stat-label", "Spin Rate"),
+                div(class = "stat-value", id = "spin_rate_value", "0 rpm")
+            ),
+            div(class = "stat-card",
+                div(class = "stat-label", "Induced Vert Break"),
+                div(class = "stat-value", id = "vert_break_value", "0.0\"")
+            ),
+            div(class = "stat-card",
+                div(class = "stat-label", "Horz Break"),
+                div(class = "stat-value", id = "horz_break_value", "0.0\"")
+            ),
+            div(class = "stat-card",
+                div(class = "stat-label", "Inferred Spin Direction"),
+                div(class = "stat-value", id = "spin_direction_value", "0°")
+            ),
+            div(class = "stat-card",
+                div(class = "stat-label", "Spin Efficiency"),
+                div(class = "stat-value", id = "spin_efficiency_value", "NA")
+            )
+        )
+    )
+    
+    
+    
   )
 )
 
@@ -136,6 +148,8 @@ server <- function(input, output, session) {
   playing <- reactiveVal(FALSE)
   original_tilt <- reactiveVal(0)
   current_pitch <- reactiveVal(NULL)
+  spinTilt_timer <- reactiveTimer(Inf) 
+  
   output$pitchTypeUI <- renderUI({
     req(input$pitcher != "")
     
@@ -145,34 +159,17 @@ server <- function(input, output, session) {
     pitch_labels <- sapply(pitch_rows$PitchType, function(pt) abbrevs[[pt]])
     
     div(style = "margin-top: 10px;",   
-        selectInput("pitch_type", "Pitch Type:",
+        selectInput("pitch_type", NULL,#"Pitch Type:",
                     choices = setNames(pitch_rows$PitchUID, pitch_labels),
                     selected = pitch_rows$PitchUID[1])
     )
   })
   
   
-  # output$pitchTypeUI <- renderUI({
-  #   req(input$pitcher)
-  #   
-  #   pitch_rows <- pitch_data[pitch_data$Pitcher == input$pitcher, ]
-  #   
-  #   # Map abbreviations to full names
-  #   pitch_labels <- sapply(pitch_rows$PitchType, function(pt) abbrevs[[pt]])
-  #   
-  #   div(style = "margin-top: 10px;",   
-  #       selectInput("pitch_type", "Pitch Type:",
-  #                   choices = setNames(pitch_rows$PitchUID, pitch_labels),
-  #                   selected = pitch_rows$PitchUID[1])
-  #   )
-  # })
-  
-  
-  
   # Update individual stat values for card display
   observe({
     pitch <- current_pitch()
-
+    
     if (!is.null(pitch)) {
       tilt <- axis_to_tilt_time_simple(pitch$SpinAxis_inf)
       session$sendCustomMessage("updateStatCard", list(
@@ -195,6 +192,11 @@ server <- function(input, output, session) {
         id = "spin_direction_value", 
         value = paste0(tilt$hours, ":", sprintf("%02d", round(tilt$minutes)))
       ))
+      session$sendCustomMessage("updateStatCard", list(
+        id = "spin_efficiency_value", 
+        value = paste0(round((pitch$spin_efficiency)*100, 1), "%")
+      ))
+     
     }
   })
   
@@ -224,21 +226,75 @@ server <- function(input, output, session) {
       }
     }, ignoreInit = TRUE)
     
-    if (has_time) {
+    if (has_time && param_name == "spinTilt") {
       observeEvent(input[[time_id]], {
         time_string <- input[[time_id]]
         if (!is.null(time_string) && nchar(time_string) > 0) {
-          parsed_time <- parse_time(time_string)
-          if (!is.null(parsed_time)) {
-            degrees <- tilt_time_to_axis_deg_simple(parsed_time$hours, parsed_time$minutes)
-            if (abs(input[[slider_id]] - degrees) > 0.01) {
-              updateSliderInput(session, slider_id, value = degrees)
+          
+          # Check if hour part is missing or invalid
+          parts <- strsplit(time_string, ":")[[1]]
+          hour_part <- if(length(parts) > 0) parts[1] else ""
+          
+          if (is.na(suppressWarnings(as.numeric(hour_part))) || nchar(trimws(hour_part)) == 0) {
+            # Hour is missing or invalid, start the timer
+            spinTilt_timer <<- reactiveTimer(500, session)  # 0.5 second timer
+          } else {
+            # Valid input, process normally
+            parsed_time <- parse_time(time_string)
+            if (!is.null(parsed_time)) {
+              degrees <- tilt_time_to_axis_deg_simple(parsed_time$hours, parsed_time$minutes)
+              if (abs(input[[slider_id]] - degrees) > 0.01) {
+                updateSliderInput(session, slider_id, value = degrees)
+              }
             }
           }
         }
       }, ignoreInit = TRUE)
+      
+      # Timer observer to apply fallback after delay
+      observeEvent(spinTilt_timer(), {
+        current_value <- input[[time_id]]
+        if (!is.null(current_value)) {
+          parts <- strsplit(current_value, ":")[[1]]
+          hour_part <- if(length(parts) > 0) parts[1] else ""
+          
+          if (is.na(suppressWarnings(as.numeric(hour_part))) || nchar(trimws(hour_part)) == 0) {
+            # Apply fallback: set hour to 0, keep minutes if valid
+            minute_part <- if(length(parts) > 1) parts[2] else "00"
+            if (is.na(suppressWarnings(as.numeric(minute_part)))) minute_part <- "00"
+            
+            new_time_string <- paste0("0:", minute_part)
+            updateTextInput(session, time_id, value = new_time_string)
+            
+            # Update slider accordingly
+            parsed_time <- parse_time(new_time_string)
+            if (!is.null(parsed_time)) {
+              degrees <- tilt_time_to_axis_deg_simple(parsed_time$hours, parsed_time$minutes)
+              updateSliderInput(session, slider_id, value = degrees)
+            }
+          }
+          
+          # Deactivate timer
+          spinTilt_timer <<- reactiveTimer(Inf, session)
+        }
+      }, ignoreInit = TRUE)
     }
   }
+  #   if (has_time) {
+  #     observeEvent(input[[time_id]], {
+  #       time_string <- input[[time_id]]
+  #       if (!is.null(time_string) && nchar(time_string) > 0) {
+  #         parsed_time <- parse_time(time_string)
+  #         if (!is.null(parsed_time)) {
+  #           degrees <- tilt_time_to_axis_deg_simple(parsed_time$hours, parsed_time$minutes)
+  #           if (abs(input[[slider_id]] - degrees) > 0.01) {
+  #             updateSliderInput(session, slider_id, value = degrees)
+  #           }
+  #         }
+  #       }
+  #     }, ignoreInit = TRUE)
+  #   }
+  # }
   
   sync_slider_text("spinTilt", has_time = TRUE)
   sync_slider_text("spinGyro")
@@ -263,20 +319,31 @@ server <- function(input, output, session) {
       current_pitch(selected_pitch)
       session$sendCustomMessage("pitch_uid", pitch_uid)
       update_sliders_for_pitch(pitch_uid)
-      playing(TRUE)
-      updateActionButton(session, "play_pause_btn", label = "Pause")
-      session$sendCustomMessage("play_toggle", TRUE)
+      playing(FALSE)
+      updateActionButton(session, "play_pause_btn", label = "Play")
+      session$sendCustomMessage("play_toggle", FALSE)
     }
   })
   
-
+  
   # Handle clock visibility toggle
   observeEvent(input$show_clock, {
-    cat("Clock toggle clicked, value:", input$show_clock, "\n")
-    cat("Sending clock_toggle message to JavaScript\n")
+    # cat("Clock toggle clicked, value:", input$show_clock, "\n")
+    # cat("Sending clock_toggle message to JavaScript\n")
     session$sendCustomMessage("clock_toggle", input$show_clock)
   })
-
+  
+  observeEvent(input$show_field, {
+    session$sendCustomMessage("field_toggle", input$show_field)
+    
+  })
+  
+  # Handle reset button
+  observeEvent(input$reset_btn, {
+    req(input$pitch_type)
+    pitch_uid <- input$pitch_type
+    update_sliders_for_pitch(pitch_uid)
+  })
   
   # Helpers
   get_pitch_by_uid <- function(pitch_uid) {

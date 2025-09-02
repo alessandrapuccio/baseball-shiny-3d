@@ -19,38 +19,46 @@ immediateSlider <- function(inputId, label, min, max, value, step = NULL, ...) {
 }
 
 # Custom slider with input field
-customSliderWithInput <- function(inputId, label, min, max, value, step = NULL, suffix = "", show_time = FALSE, ...) {
+customSpinAxisSlider <- function(inputId, label, min, max, value, step = NULL, suffix = "", 
+                                 show_slider = TRUE, show_time = FALSE, ...) {
   sliderInputId <- paste0(inputId, "_slider")
   textInputId <- paste0(inputId, "_text")
   timeInputId <- paste0(inputId, "_time")
   
   div(class = "custom-slider-group",
-      div(class = "slider-header",
-          span(class = "slider-label", label)
-      ),
-      # Combined row for slider + input box
-      div(class = "slider-row",
-          div(class = "slider-container",
-              style = "flex: 1 1 0;",
-              immediateSlider(sliderInputId, NULL, min, max, value, step = step, ticks = FALSE, ...)
-          ),
-          div(class = "slider-input-container",
-              numericInput(textInputId, NULL, value = value, min = min, max = max, step = step, width = "60px"),
-              if(suffix != "") span(class = "slider-suffix", suffix)
-          )
-      ),
-      # Time input on separate line if enabled
+      
+      
+      # Conditionally show slider + numeric input row
+      if (show_slider) {
+        div(class = "slider-header",
+            span(class = "slider-label", label)
+        )
+        div(class = "slider-row",
+            div(class = "slider-container",
+                style = "flex: 1 1 0;",
+                immediateSlider(sliderInputId, NULL, min, max, value, step = step, ticks = FALSE, ...)
+            ),
+            div(class = "slider-input-container",
+                numericInput(textInputId, NULL, value = value, min = min, max = max, step = step, width = "60px"),
+                if(suffix != "") span(class = "slider-suffix", suffix)
+            )
+        )
+      } else {
+        # Hidden inputs to maintain reactivity even when slider is hidden
+        div(style = "display: none;",
+            sliderInput(sliderInputId, NULL, min, max, value, step = step, ...),
+            numericInput(textInputId, NULL, value = value, min = min, max = max, step = step)
+        )
+      },
+      
+      # Time input section
       if (show_time) {
         div(
           class = "slider-time-container",
-          # style = "display: flex; flex-direction: column; align-items: center;",
-          
-          # Wrap label + input in one container
           div(
-            # style = "display: flex; flex-direction: column; align-items: center;",
-            span(class = "time-label", "Tilt Clock Input:"),
+            span(class = "time-label", "Measured Spin Direction:"),
             textInput(
-              "spinTilt_time", NULL,
+              timeInputId, NULL,
               value = format_time(0, 0),
               placeholder = "HH:MM",
               width = "100px"
