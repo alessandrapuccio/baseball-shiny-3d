@@ -71,7 +71,7 @@ customSpinAxisSlider <- function(inputId, label, min, max, value, step = NULL, s
 
 
 axis_to_tilt_time_simple <- function(degrees) {
-
+  
   clock_hour_float <- (degrees / 30 + 6) %% 12
   
   hours <- floor(clock_hour_float)

@@ -50,7 +50,7 @@ ui <- fluidPage(
         window.postMessage({ type: 'field_toggle', value: showField }, '*');
       });
     ")),
- 
+    
   ),
   
   tags$div(id = "root", style = "width: 100vw; height: 100vh;"),
@@ -109,7 +109,7 @@ ui <- fluidPage(
     class = "stats-panel",
     
     div(class = "stats-section",
-        h5("Pitch Shape", class = "section-title"),
+        h5("Pitch Shape", class = "section-title",id = "stats_title"),
         div(class = "stats-cards",
             div(class = "stat-card",
                 div(class = "stat-label", "Velo"),
@@ -150,6 +150,28 @@ server <- function(input, output, session) {
   current_pitch <- reactiveVal(NULL)
   spinTilt_timer <- reactiveTimer(Inf) 
   
+
+  ## expected pitch shape
+  user_modified <- reactiveVal(FALSE)
+  original_values <- reactiveVal(NULL)
+  resetting <- reactiveVal(FALSE)  # so it doesnt detect the changes happening when reset is hit and go back to expected panel 
+  
+  
+  calculate_expected_vert_break <- function(spin_vector_x, spin_vector_y, spin_vector_z, ball_x, ball_y, pitch_data) {
+    return("")
+  }
+  calculate_expected_horz_break <- function(spin_vector_x, spin_vector_y, spin_vector_z, ball_x, ball_y, pitch_data) {
+    return("")
+  }
+  calculate_expected_spin_direction <- function(spin_vector_x, spin_vector_y, spin_vector_z, ball_x, ball_y, pitch_data) {
+    return("")
+  }
+  calculate_expected_spin_efficiency <- function(spin_vector_x, spin_vector_y, spin_vector_z, ball_x, ball_y, pitch_data) {
+    return("")
+  }  
+  
+  
+  
   output$pitchTypeUI <- renderUI({
     req(input$pitcher != "")
     
@@ -166,39 +188,93 @@ server <- function(input, output, session) {
   })
   
   
+  ## Update individual stat values for card display
   # Update individual stat values for card display
   observe({
     pitch <- current_pitch()
     
     if (!is.null(pitch)) {
-      tilt <- axis_to_tilt_time_simple(pitch$SpinAxis_inf)
-      session$sendCustomMessage("updateStatCard", list(
-        id = "velo_value", 
-        value = paste0(round(pitch$start_speed, 1), " mph")
-      ))
-      session$sendCustomMessage("updateStatCard", list(
-        id = "spin_rate_value", 
-        value = paste0(round(pitch$SpinRate, 1), " rpm")
-      ))
-      session$sendCustomMessage("updateStatCard", list(
-        id = "vert_break_value", 
-        value = paste0(round(pitch$break_z,1), "\"")
-      ))
-      session$sendCustomMessage("updateStatCard", list(
-        id = "horz_break_value", 
-        value = paste0(round(pitch$break_x, 1), "\"")
-      ))
-      session$sendCustomMessage("updateStatCard", list(
-        id = "spin_direction_value", 
-        value = paste0(tilt$hours, ":", sprintf("%02d", round(tilt$minutes)))
-      ))
-      session$sendCustomMessage("updateStatCard", list(
-        id = "spin_efficiency_value", 
-        value = paste0(round((pitch$spin_efficiency)*100, 1), "%")
-      ))
-     
+      if (user_modified() && !is.null(input$spinTilt_slider) && !is.null(input$spinGyro_slider) && 
+          !is.null(input$ballX_slider) && !is.null(input$ballY_slider)) {
+        # USER HAS MODIFIED VALUES - SHOW EXPECTED PITCH SHAPE
+        # Update title
+        session$sendCustomMessage("updateStatCard", list(
+          id = "stats_title", 
+          value = "Expected Pitch Shape"
+        ))
+        
+        # Calculate current spin vector from sliders
+        user_display_tilt <- input$spinTilt_slider
+        actual_tilt <- (360 - (user_display_tilt - 90)) %% 360
+        spin_vector <- calculate_vector_from_tilt_gyro(actual_tilt, input$spinGyro_slider)
+        
+        # Calculate expected values using placeholder functions
+        exp_vert <- calculate_expected_vert_break(spin_vector[1], spin_vector[2], spin_vector[3], 
+                                                  input$ballX_slider, input$ballY_slider, pitch)
+        exp_horz <- calculate_expected_horz_break(spin_vector[1], spin_vector[2], spin_vector[3], 
+                                                  input$ballX_slider, input$ballY_slider, pitch)
+        exp_spin_dir <- calculate_expected_spin_direction(spin_vector[1], spin_vector[2], spin_vector[3], 
+                                                          input$ballX_slider, input$ballY_slider, pitch)
+        exp_spin_eff <- calculate_expected_spin_efficiency(spin_vector[1], spin_vector[2], spin_vector[3], 
+                                                           input$ballX_slider, input$ballY_slider, pitch)
+        
+        # Update with expected values
+        session$sendCustomMessage("updateStatCard", list(id = "vert_break_value", value = exp_vert))
+        session$sendCustomMessage("updateStatCard", list(id = "horz_break_value", value = exp_horz))
+        session$sendCustomMessage("updateStatCard", list(id = "spin_direction_value", value = exp_spin_dir))
+        session$sendCustomMessage("updateStatCard", list(id = "spin_efficiency_value", value = exp_spin_eff))
+        
+      } else {
+        # SHOW ORIGINAL PITCH SHAPE
+        session$sendCustomMessage("updateStatCard", list(
+          id = "stats_title", 
+          value = "Pitch Shape"
+        ))
+        
+        tilt <- axis_to_tilt_time_simple(pitch$SpinAxis_inf)
+        session$sendCustomMessage("updateStatCard", list(id = "vert_break_value", value = paste0(round(pitch$break_z,1), "\"")))
+        session$sendCustomMessage("updateStatCard", list(id = "horz_break_value", value = paste0(round(pitch$break_x, 1), "\"")))
+        session$sendCustomMessage("updateStatCard", list(id = "spin_direction_value", value = paste0(tilt$hours, ":", sprintf("%02d", round(tilt$minutes)))))
+        session$sendCustomMessage("updateStatCard", list(id = "spin_efficiency_value", value = paste0(round((pitch$spin_efficiency)*100, 1), "%")))
+      }
+      
+      # Velocity and spin rate always stay the same
+      session$sendCustomMessage("updateStatCard", list(id = "velo_value", value = paste0(round(pitch$start_speed, 1), " mph")))
+      session$sendCustomMessage("updateStatCard", list(id = "spin_rate_value", value = paste0(round(pitch$SpinRate, 1), " rpm")))
     }
   })
+  # observe({
+  #   pitch <- current_pitch()
+  #   
+  #   if (!is.null(pitch)) {
+  #     tilt <- axis_to_tilt_time_simple(pitch$SpinAxis_inf)
+  #     session$sendCustomMessage("updateStatCard", list(
+  #       id = "velo_value", 
+  #       value = paste0(round(pitch$start_speed, 1), " mph")
+  #     ))
+  #     session$sendCustomMessage("updateStatCard", list(
+  #       id = "spin_rate_value", 
+  #       value = paste0(round(pitch$SpinRate, 1), " rpm")
+  #     ))
+  #     session$sendCustomMessage("updateStatCard", list(
+  #       id = "vert_break_value", 
+  #       value = paste0(round(pitch$break_z,1), "\"")
+  #     ))
+  #     session$sendCustomMessage("updateStatCard", list(
+  #       id = "horz_break_value", 
+  #       value = paste0(round(pitch$break_x, 1), "\"")
+  #     ))
+  #     session$sendCustomMessage("updateStatCard", list(
+  #       id = "spin_direction_value", 
+  #       value = paste0(tilt$hours, ":", sprintf("%02d", round(tilt$minutes)))
+  #     ))
+  #     session$sendCustomMessage("updateStatCard", list(
+  #       id = "spin_efficiency_value", 
+  #       value = paste0(round((pitch$spin_efficiency)*100, 1), "%")
+  #     ))
+  #     
+  #   }
+  # })
   
   
   # Helper to sync sliders with numeric inputs
@@ -280,26 +356,45 @@ server <- function(input, output, session) {
       }, ignoreInit = TRUE)
     }
   }
-  #   if (has_time) {
-  #     observeEvent(input[[time_id]], {
-  #       time_string <- input[[time_id]]
-  #       if (!is.null(time_string) && nchar(time_string) > 0) {
-  #         parsed_time <- parse_time(time_string)
-  #         if (!is.null(parsed_time)) {
-  #           degrees <- tilt_time_to_axis_deg_simple(parsed_time$hours, parsed_time$minutes)
-  #           if (abs(input[[slider_id]] - degrees) > 0.01) {
-  #             updateSliderInput(session, slider_id, value = degrees)
-  #           }
-  #         }
-  #       }
-  #     }, ignoreInit = TRUE)
-  #   }
-  # }
   
   sync_slider_text("spinTilt", has_time = TRUE)
   sync_slider_text("spinGyro")
   sync_slider_text("ballX")
   sync_slider_text("ballY")
+  
+  # expected pitch shape - USER MODIFICATION DETECTORS
+  observe({
+    if (resetting()) return()
+    
+    # Only proceed if we have original values stored AND all sliders exist
+    req(original_values())
+    req(input$spinTilt_slider, input$spinGyro_slider, input$ballX_slider, input$ballY_slider)
+    
+    orig_vals <- original_values()
+    
+    # Make sure original values have all required fields
+    if (is.null(orig_vals$spinTilt) || is.null(orig_vals$spinGyro) || 
+        is.null(orig_vals$ballX) || is.null(orig_vals$ballY)) {
+      return()
+    }
+    
+    current_vals <- list(
+      spinTilt = input$spinTilt_slider,
+      spinGyro = input$spinGyro_slider,
+      ballX = input$ballX_slider,
+      ballY = input$ballY_slider
+    )
+    
+    # Check if any value has changed from original (with small tolerance for floating point)
+    changed <- abs(current_vals$spinTilt - orig_vals$spinTilt) > 0.51 ||
+      abs(current_vals$spinGyro - orig_vals$spinGyro) > 0.51 ||
+      abs(current_vals$ballX - orig_vals$ballX) > 0.51 ||
+      abs(current_vals$ballY - orig_vals$ballY) > 0.51
+    
+    if (changed && !user_modified()) {
+      user_modified(TRUE)
+    }
+  })
   
   # Initialize sliders with first pitch data
   observe({
@@ -343,6 +438,11 @@ server <- function(input, output, session) {
     req(input$pitch_type)
     pitch_uid <- input$pitch_type
     update_sliders_for_pitch(pitch_uid)
+    
+    # Force the modification flag to FALSE after reset
+    shinyjs::delay(1200, {
+      user_modified(FALSE)
+    })
   })
   
   # Helpers
@@ -379,6 +479,8 @@ server <- function(input, output, session) {
   }
   
   update_sliders_for_pitch <- function(pitch_uid) {
+    resetting(TRUE)
+    
     selected_pitch <- get_pitch_by_uid(pitch_uid)
     if (is.null(selected_pitch)) return()
     
@@ -391,13 +493,6 @@ server <- function(input, output, session) {
     original_tilt(tilt_gyro$tilt)
     display_tilt <- (360 - tilt_gyro$tilt + 90) %% 360
     
-    # Update spin controls
-    updateSliderInput(session, "spinTilt_slider", value = round(display_tilt, 1))
-    updateNumericInput(session, "spinTilt_text", value = round(display_tilt, 1))
-    updateSliderInput(session, "spinGyro_slider", value = round(tilt_gyro$gyro, 1))
-    updateNumericInput(session, "spinGyro_text", value = round(tilt_gyro$gyro, 1))
-    
-    # Update seam orientation controls with actual pitch values
     seam_lat <- if(!is.null(selected_pitch$seam_orientation_lat) && !is.na(selected_pitch$seam_orientation_lat)) {
       selected_pitch$seam_orientation_lat
     } else {
@@ -408,19 +503,39 @@ server <- function(input, output, session) {
     } else {
       0
     }
-    
-    # Convert longitude for display (add 90 degrees with wrapping)
-    display_lon <- seam_lon #((seam_lon + 90 + 180) %% 360) - 180
-    
-    # Convert latitude for display (negative version)
+    display_lon <- seam_lon
     display_lat <- seam_lat
+    
+    # STORE ORIGINAL VALUES (ROUNDED AS THEY APPEAR ON SLIDERS)
+    original_values(list(
+      spinTilt = round(display_tilt, 1),
+      spinGyro = round(tilt_gyro$gyro, 1),
+      ballX = round(display_lon, 1),
+      ballY = round(display_lat, 1)
+    ))
+    
+    # RESET USER MODIFICATION FLAG
+    user_modified(FALSE)
+    
+    # Update spin controls
+    updateSliderInput(session, "spinTilt_slider", value = round(display_tilt, 1))
+    updateNumericInput(session, "spinTilt_text", value = round(display_tilt, 1))
+    updateSliderInput(session, "spinGyro_slider", value = round(tilt_gyro$gyro, 1))
+    updateNumericInput(session, "spinGyro_text", value = round(tilt_gyro$gyro, 1))
     
     updateSliderInput(session, "ballX_slider", value = round(display_lon, 1))
     updateNumericInput(session, "ballX_text", value = round(display_lon, 1))
     updateSliderInput(session, "ballY_slider", value = round(display_lat, 1))
     updateNumericInput(session, "ballY_text", value = round(display_lat, 1))
+    
+    
+    # small delay to ensure all slider updates are complete before re-enabling change detection that would flip shape panel back to expected
+    reset_timer <- reactiveTimer(1000, session)
+    observe({
+      reset_timer()
+      resetting(FALSE)
+    })
   }
-  
   
   # Tilt + gyro updates
   observe({
