@@ -1,0 +1,30 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+
+load(file.path('\\\\AVS-FILESVR-01\\Baseball/Analytics Share/seamar-pd/', 'daily-data','spin-filtering-data.RData'))
+
+```
+
+```{r}
+library(dplyr)
+i2025_avg_data <- avg_focus_player_data %>%
+  filter(year == 2025) %>%
+  select("Name", "PitchType", "spin_backspin"  "spin_sidespin"   "spin_gyrospin"   "spin_efficiency", "start_speed",  "break_x",   "break_z",    "year"   )
+
+
+```
+
+```{r}
+colnames(avg_focus_player_data)
+```
+```{r}
+bryce <- pitch_data %>% filter(Pitcher == "Miller, Bryce")
+nrows(bryce)
+print(bryce)
+```
+

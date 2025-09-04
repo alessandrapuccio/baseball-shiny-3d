@@ -1,0 +1,467 @@
+.control-panel {
+  transform: scale(0.72);          /* Shrink to 75% size */
+  transform-origin: top left;      /* Anchor shrinking from the top-left corner */
+
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 17px 25px;                 /* 0 vertical, 10px horizontal */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  min-width: 270px;
+}
+
+
+/* Stats Panel Styling */
+.stats-panel {
+  transform: scale(0.8);
+  transform-origin: top right;
+  
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: stretch;
+  min-width: 280px;
+  max-width: 300px;
+}
+
+.stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.header-panel {
+  background: white;  /* same as control/stats panels */
+  border-radius: 8px;
+  padding: 5px;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
+  font-weight: bold;
+}
+
+/* Card Version Styling */
+.stats-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 12px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+
+.stat-label {
+  font-size: 15px;
+  font-weight: 650;
+  color: #333;
+  text-align: left;
+}
+
+.stat-value {
+  font-size: 18px;
+  color: #013d3d;
+  text-align: right;
+  min-width: 80px;
+}
+
+/* Highlight specific stats with colors */
+.stat-card:child .stat-value {
+  color:  #005c5c; 
+}
+
+.control-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.pitch-controls {
+  min-width: 180px;
+}
+
+.spin-controls, .rotation-controls {
+  min-width: 160px;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 3px 0 3px 0;
+  text-align: center;
+  border-bottom: 1px solid #606060;
+  border-top: 1px solid #606060;
+  padding-bottom: 15px;
+  padding-top: 15px;
+}
+
+
+.pitch-select {
+  margin-bottom: 0;
+  margin-top: 0;
+}
+
+.pitch-select .form-group {
+  margin-bottom: 0;
+}
+
+.pitch-select select {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 12px 12px;
+  font-size: 14px;
+  color: #333;
+  width: 100%;
+}
+
+.custom-slider-group {
+  margin-bottom: 10px;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.slider-label {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  font-weight:bold;
+}
+
+.slider-input-container {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.slider-input-container .form-group {
+  margin: 0;
+}
+
+.slider-input-container input {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 4px 5px;
+  font-size: 12px;
+  text-align: center;
+  color: #333;
+  height: 25px;
+}
+
+.slider-suffix {
+  font-size: 12px;
+  color: #667;
+  font-weight: 500;
+}
+
+.slider-container {
+  margin-top: 5px;
+  position: relative;
+}
+
+/* Customize the actual slider */
+.slider-container .irs {
+  height: 15px;
+}
+
+.slider-container .irs-bar {
+  background: #005c5c;
+  height: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.slider-container .irs-line {
+  background: #ddd;
+  height: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.slider-container .irs-handle {
+  background: #ffffff;
+  border: 2px solid #005c5c;
+  width: 18px;
+  height: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.slider-container .irs-handle:hover {
+  background: #f9f9f9;
+}
+
+/* Fix slider value display - move it below the slider */
+.slider-container .irs-from,
+.slider-container .irs-to,
+.slider-container .irs-single {
+  background: #333;
+  color: white;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  top: 25px !important;
+}
+
+/* NEW NE NE */
+.custom-slider-group .slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;      /* space between slider and input box */
+  margin-bottom: 8px;
+}
+
+.custom-slider-group .slider-container {
+  flex: 1 1 0;
+  min-width: 200px;  /* controls slider width, adjust as needed */
+  max-width: 220px;  /* optional, restrict max width */
+}
+
+.custom-slider-group .slider-input-container {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 4px;  /* space between slider and input */
+}
+
+.reset-button {
+  background-color: #0C2C56 !important;
+  color: white !important;
+  border: none;
+  border-radius: 4px;
+  
+  padding: 10px 12px;     /* smaller vertical and horizontal padding */
+  font-size: 16px;         /* keep text size the same */
+  font-weight: 500;
+  cursor: pointer;
+  width: 130px;            /* smaller width */
+  margin-left: 3px;
+  margin-bottom: 10px;
+}
+   
+.button-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.play-button {
+  background: #005c5c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  
+  padding: 10px 12px;     /* smaller vertical and horizontal padding */
+  font-size: 16px;         /* keep text size the same */
+  font-weight: 500;
+  margin-right: 3px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  width: 130px;            /* smaller width */
+}
+
+.pause-orientation-button {
+   background: #005c5c;
+   color: white;
+   width: 200px;
+   padding: 10px 12px;   /* taller button */
+   margin-bottom: 4px;   /* small space before next element */
+   font-size: 15px;      /* optional: slightly bigger text */
+}
+
+
+.play-button,
+.play-button:focus,
+.play-button:active,
+.play-button:visited {
+  background: #005c5c !important;
+  color: white !important;
+  border: none;
+  outline: none;
+}
+
+.pause-orientation-button:hover,
+.reset-button:hover,
+.play-button:hover {
+  background: #004545 !important; /* darker teal on hover */
+  color: white !important;        /* keep text readable */
+}
+
+.play-button:active {
+  background: #003c3c !important; /* slightly darker when pressed */
+  color: white !important;
+}
+
+
+/* Grid and tick styling */
+.slider-container .irs-grid {
+  display: block;
+}
+
+.slider-container .irs-grid-text {
+  color: #666;
+  font-size: 10px;
+  top: 25px !important;
+}
+
+.slider-container .irs-grid-pol {
+  background: #ccc;
+}
+
+.slider-container .irs-min,
+.slider-container .irs-max {
+  color: #666;
+  font-size: 12px;
+  background: none;
+  padding: 2px 0;
+  top: 15px !important;
+}
+
+
+.slider-time-container {
+  display: flex;
+  flex-direction: column;   /* stack label + box vertically */
+  align-items: center;      /* center horizontally */
+  margin-left: 0;           /* remove the left push */
+  gap: 6px;                 /* nice spacing */
+}
+
+
+.slider-time-container .form-group {
+  margin: 0;
+}
+
+.slider-time-container {
+  /* Your existing styles are good, just add these: */
+  width: 100%;             /* Take full width of parent for centering */
+  text-align: center;      /* Center everything inside */
+}
+
+.slider-time-container input {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 10px 12px;      /* Increase padding for more height */
+  font-size: 25px;         /* Bigger font size */
+  text-align: center;
+  color: #333;
+  height: 60px;                    /* CLOCK SIIIIIIIIZEEEEEE */
+  width: 120px !important; 
+  
+}
+
+
+.slider-time-container .time-label {
+  text-align: center;      /* Center the text within the label */
+  width: 100%;             /* Take full width for perfect centering */
+}
+
+/* Target the Shiny textInput wrapper specifically */
+.slider-time-container .form-group {
+  margin: 0 !important;    /* Override Shiny's default margins */
+  width: auto;             /* Let it size to content */
+  display: flex;
+  justify-content: center; /* Center the input field */
+}
+
+/* Style the actual input field */
+.slider-time-container input[type="text"] {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 10px 12px;
+  font-size: 24px;
+  text-align: center;
+  color: #333;
+
+  margin: 0 auto;          /* Center the input itself */
+}
+
+/* Alternative approach - if the above doesn't work, try this instead */
+.control-section .slider-time-container {
+  align-items: center !important;
+  text-align: center;
+}
+
+.control-section .slider-time-container > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.slider-time-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: 5px;
+  padding-left: 0;
+}
+
+.slider-time-row .slider-time-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 0;
+}
+
+.time-label {
+  font-size: 15px;
+  font-weight:bold;
+  min-width: 35px;
+  margin-top: 2px;
+  margin-bottom: 8px;
+}
+
+.clock-input {
+  font-size: 25px;
+  height: 42px;         /* CLOCK SIZE */
+  width: 50px !important;
+  padding: 5px 1px;
+}
+.compact-checkbox {
+  display: flex;
+  justify-content: center;   /* center the group */
+  gap: 22px;                  /* small space between checkboxes */
+  flex-wrap: wrap;           /* wrap if too narrow */
+}
+
+.compact-checkbox .form-group.shiny-input-container {
+  display: inline-flex !important;   /* make them inline */
+  align-items: center;
+  margin: 0;
+  width: auto !important;            /* prevent full-width expansion */
+}
+
+.compact-checkbox .form-group input[type="checkbox"] {
+  margin-right: 6px;                 /* space between box and label */
+  transform: scale(1.2);
+}
+
+.compact-checkbox .form-group label {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
