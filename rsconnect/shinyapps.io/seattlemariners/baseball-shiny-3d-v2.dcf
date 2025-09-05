@@ -1,0 +1,13 @@
+name: baseball-shiny-3d-v2
+title: baseball-shiny-3d-v2
+username: seattlemariners
+account: seattlemariners
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15356077
+bundleId: 10864175
+url: https://seattlemariners.shinyapps.io/baseball-shiny-3d-v2/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: helpers_goal_two.R

@@ -1,6 +1,6 @@
 # Load pitch data
 load_pitch_data <- function() {
-  paths <- c("www/gilbert_augEighth.json", "gilbert_augEighth.json")
+  paths <- c("www/averaging_pitch_data.json", "averaging_pitch_data.json")
   
   for (path in paths) {
     if (file.exists(path)) {
@@ -8,8 +8,22 @@ load_pitch_data <- function() {
       return(fromJSON(readLines(path, warn = FALSE)))
     }
   }
-  stop("Could not find gilbert_augEighth.json ")
+  stop("Could not find data (avg pitching data) ")
 }
+
+calculate_expected_vert_break <- function(spin_vector_x, spin_vector_y, spin_vector_z, ball_x, ball_y, pitch_data) {
+  return("")
+}
+calculate_expected_horz_break <- function(spin_vector_x, spin_vector_y, spin_vector_z, ball_x, ball_y, pitch_data) {
+  return("")
+}
+calculate_expected_spin_direction <- function(spin_vector_x, spin_vector_y, spin_vector_z, ball_x, ball_y, pitch_data) {
+  return("")
+}
+calculate_expected_spin_efficiency <- function(spin_vector_x, spin_vector_y, spin_vector_z, ball_x, ball_y, pitch_data) {
+  return("")
+}  
+
 
 # Immediate slider input wrapper data-immediate="true"
 immediateSlider <- function(inputId, label, min, max, value, step = NULL, ...) {

@@ -14,17 +14,193 @@ load(file.path('\\\\AVS-FILESVR-01\\Baseball/Analytics Share/seamar-pd/', 'daily
 library(dplyr)
 i2025_avg_data <- avg_focus_player_data %>%
   filter(year == 2025) %>%
-  select("Name", "PitchType", "spin_backspin"  "spin_sidespin"   "spin_gyrospin"   "spin_efficiency", "start_speed",  "break_x",   "break_z",    "year"   )
+  select("Name", "PitchType", "spin_backspin",  "spin_sidespin",   "spin_gyrospin",  "spin_efficiency", "start_speed",  "break_x",   "break_z",    "year")
 
 
 ```
 
+
+
+
 ```{r}
-colnames(avg_focus_player_data)
+pitch_data <- fromJSON("averaging_pitch_data.json", flatten = TRUE)
+
+# Filter to Luis Castillo's 4-Seam Fastballs
+castillo_FA_2025 <- pitch_data %>%
+  filter(
+    Pitcher == "Castillo, Luis",
+    PitchType== "FA"
+  )
+```
+
+
+```{r}
+source("helpers_goal_two.R")
+
+data <- castillo_FA_2025
+pitcher <- "Castillo, Luis" 
+pitch_type <- "FA" 
+
+
+avgs <- get_average_spin_info(data, pitcher, pitch_type)
+```
+
+```{r}
+print(avgs)
+```
+
+```{r}
+seam <- get_dominant_seam_orientation(castillo_FA_2025)
+head(seam)
+```
+
+
+
+
+
+
+
+```{r}
+# colnames(castillo_FA_2025)
+data <- castillo_FA_2025
+
 ```
 ```{r}
-bryce <- pitch_data %>% filter(Pitcher == "Miller, Bryce")
-nrows(bryce)
-print(bryce)
+# library(mclust)
+
+deg2rad = function(x) {
+  x * pi/180
+}
+rad2deg = function(x) {
+  x * 180/pi
+}
+
+data <- castillo_FA_2025
+selected_pitch_type <- "FA"
+
+# From the first code snippet - this converts lat/lon to 3D coordinates
+cluster_data <- data %>%
+  mutate(
+    clust_x = cos(deg2rad(seam_orientation_lat)) * sin(deg2rad(seam_orientation_lon)),
+    clust_y = sin(deg2rad(seam_orientation_lat)),
+    clust_z = cos(deg2rad(seam_orientation_lat)) * cos(deg2rad(seam_orientation_lon))
+  )
+
+# Filter by pitch type and require minimum 30 pitches
+this_cluster_data = cluster_data %>% 
+  filter(PitchType == selected_pitch_type) %>%
+  select(PitchUID, PitchType, contains('clust_')) %>% 
+  filter(!is.na(clust_x))
+
+if (nrow(this_cluster_data) < 30) {next}
+
+
+# Initial clustering with 10 clusters using Gaussian Mixture Models
+cluster_mod = this_cluster_data %>% 
+  select(contains('clust_')) %>%
+  mclust::Mclust(., 5, verbose = T)
+
+
+this_tagged_data = this_cluster_data %>% 
+    mutate(cluster = as.factor(predict(cluster_mod,
+                                       newdata = this_cluster_data %>%
+                                         select(contains('clust_')))$classification))
+      
+# Get cluster centers and convert back to lat/lon
+these_cluster_centers = this_tagged_data %>% 
+  group_by(cluster) %>% 
+  summarize(clust_x = mean(clust_x, na.rm = T),
+            clust_y = mean(clust_y, na.rm = T),
+            clust_z = mean(clust_z, na.rm = T),
+            num_pitches = n()) %>% 
+  ungroup() %>% 
+  mutate(freq = num_pitches/sum(num_pitches),
+         seam_orientation_lat = rad2deg(asin(clust_y)),
+         seam_orientation_lon = rad2deg(atan2(clust_x, clust_z)),
+         radius = sqrt(clust_x^2 + clust_y^2 + clust_z^2))
+
+
+# Filter out bad clusters (too small, inside ball, too close together)
+surface_clusters = these_cluster_centers %>% 
+  filter(radius >= .98, freq >= .05)  # On surface, significant size
+```
+
+```{r}
+head(surface_clusters)
+# library(ggplot2)
+
+# Make sure cluster is a factor for coloring
+surface_clusters$cluster <- as.factor(surface_clusters$cluster)
+
+ggplot(surface_clusters, aes(x = seam_orientation_lon, y = seam_orientation_lat, color = cluster)) +
+  geom_point(size = 3, alpha = 0.8) +
+  theme_minimal() +
+  labs(
+    title = "Pitch Clusters by Seam Orientation",
+    x = "Seam Orientation Longitude",
+    y = "Seam Orientation Latitude",
+    color = "Cluster"
+  ) +
+  scale_color_brewer(palette = "Set1") +
+  xlim(-180, 180) +
+  ylim(-90, 90)
+
+
+```
+
+
+
+```{r}
+get_dominant_cluster_and_avg_spin <- function(pitcher_data, date_range) {
+  
+  # Filter by date range
+  filtered_data <- pitcher_data %>% 
+    filter(date >= date_range[1] & date <= date_range[2])
+  
+  # Convert to 3D coordinates for clustering
+  cluster_data <- filtered_data %>%
+    mutate(
+      clust_x = cos(deg2rad(seam_orientation_lat)) * sin(deg2rad(seam_orientation_lon)),
+      clust_y = sin(deg2rad(seam_orientation_lat)),
+      clust_z = cos(deg2rad(seam_orientation_lat)) * cos(deg2rad(seam_orientation_lon))
+    )
+  
+  if (nrow(cluster_data) < 10) return(NULL)  # Need minimum pitches
+  
+  # Cluster seam orientations
+  cluster_mod <- cluster_data %>% 
+    select(contains('clust_')) %>%
+    mclust::Mclust(., min(5, nrow(cluster_data)))  # Fewer clusters for smaller data
+  
+  # Find dominant cluster (largest)
+  cluster_assignments <- predict(cluster_mod)$classification
+  dominant_cluster <- names(sort(table(cluster_assignments), decreasing = T))[1]
+  
+  # Get dominant cluster's seam orientation
+  dominant_pitches <- cluster_data[cluster_assignments == dominant_cluster, ]
+  
+  dominant_seam_lat <- rad2deg(asin(mean(dominant_pitches$clust_y)))
+  dominant_seam_lon <- rad2deg(atan2(mean(dominant_pitches$clust_x), 
+                                     mean(dominant_pitches$clust_z)))
+  
+  # Average all spin metrics across entire date range
+  avg_spin_metrics <- filtered_data %>%
+    summarise(
+      avg_spin_rate = mean(spin_rate, na.rm = T),
+      avg_spin_axis = mean(spin_axis, na.rm = T),
+      avg_spin_efficiency = mean(spin_efficiency, na.rm = T),
+      avg_backspin = mean(spin_backspin, na.rm = T),
+      avg_sidespin = mean(spin_sidespin, na.rm = T),
+      avg_gyrospin = mean(spin_gyrospin, na.rm = T),
+      cluster_size = nrow(dominant_pitches),
+      total_pitches = nrow(filtered_data)
+    )
+  
+  return(list(
+    dominant_seam_lat = dominant_seam_lat,
+    dominant_seam_lon = dominant_seam_lon,
+    spin_metrics = avg_spin_metrics
+  ))
+}
 ```
 

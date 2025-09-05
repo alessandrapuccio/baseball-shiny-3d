@@ -12728,7 +12728,7 @@ function U0() {
 function M0({ spinRate: o, playing: l, spinAxis: p, currentSeamLat: m, currentSeamLon: i, useSeamOrientation: n, resetSpin: s }) {
   const c = Qo(
     sv,
-    "/models/baseball-v2.glb",
+    "models/baseball-v2.glb",
     (g) => {
       g.setMeshoptDecoder(dv);
     }
@@ -12769,7 +12769,7 @@ function M0({ spinRate: o, playing: l, spinAxis: p, currentSeamLat: m, currentSe
 function D0() {
   const [o, l] = Va(!0), [p, m] = Va(!0), [i, n] = Va([]), [s, c] = Va(null), [f, d] = Va(!1), [v, y] = Va(new Le.Vector3(1, 0, 0)), [g, E] = Va(0), [T, M] = Va(0), [D, A] = Va(!1);
   Ta(() => {
-    fetch("/gilbert_augEighth.json").then((C) => C.json()).then((C) => {
+    fetch("averaging_pitch_data.json").then((C) => C.json()).then((C) => {
       n(C || []), C && C.length > 0 && c(C[0].PitchUID);
     });
   }, []), Ta(() => {

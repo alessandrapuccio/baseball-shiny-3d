@@ -2,8 +2,10 @@ library(shiny)
 library(shinyjs)
 library(jsonlite)
 library(here)
+library(dplyr)
 
 source("www/helpers.R")
+source("www/helpers_goal_two.R")
 
 pitch_data <<- load_pitch_data()
 
@@ -56,12 +58,31 @@ ui <- fluidPage(
     # Pitch Controls Section
     div(class = "control-section pitch-controls",
         h5("SELECT PITCH", class = "section-title"),
+        
         div(class = "pitch-select",
+            # Pitcher selector
             selectInput("pitcher", "Select Pitcher and Pitch Type:",
                         choices = unique(pitch_data$Pitcher),
                         selected = unique(pitch_data$Pitcher)[1]),
-            uiOutput("pitchTypeUI")
+            
+            # Pitch type selector (dynamic based on pitcher)
+            uiOutput("pitchTypeUI"),
+            
+            div(
+              style = "margin-top: 10px;",  # Adjust the value as needed
+              dateRangeInput(
+                "dateRange", 
+                "Select Date Range:",
+                start = min(as.Date(pitch_data$Date)),
+                end   = max(as.Date(pitch_data$Date)),
+                format = "yyyy-mm-dd",
+                startview = "month",
+                separator = " to "
+              )
+            )
         ),
+        
+        # Buttons
         div(class = "button-group",
             actionButton("play_pause_btn", "Play", class = "play-button"),
             actionButton("reset_btn", "Reset", class = "reset-button")
@@ -132,6 +153,12 @@ ui <- fluidPage(
         )
     )
   )
+  # absolutePanel(
+  #   bottom = 10, left = 10, right = 10, zIndex = 500,
+  #   style = "background-color: #f0f0f0; padding: 10px; font-family: monospace; font-size: 12px; border: 1px solid #ccc;",
+  #   h5("DEBUG: Current Averaged Data", style = "margin: 0 0 5px 0;"),
+  #   verbatimTextOutput("debug_avg_data")
+  # ) 
 )
 
 
@@ -147,33 +174,77 @@ server <- function(input, output, session) {
   original_values <- reactiveVal(NULL)
   resetting <- reactiveVal(FALSE)  # so it doesnt detect the changes happening when reset is hit and go back to expected panel 
   
+  # NEW: Reactive for averaged pitch data based on user selections
+  averaged_pitch_data <- reactive({
+    req(input$pitcher, input$pitchType, input$dateRange)
+    
+    # Validate that the selected pitch type exists for the current pitcher
+    valid_pitch_types <- unique(pitch_data[pitch_data$Pitcher == input$pitcher, "PitchType"])
+    
+    if (!input$pitchType %in% valid_pitch_types) {
+      cat("=== INVALID COMBINATION ===\n")
+      cat("Pitcher:", input$pitcher, "does not throw pitch type:", input$pitchType, "\n")
+      cat("Valid pitch types:", paste(valid_pitch_types, collapse = ", "), "\n")
+      cat("Returning NULL until dropdown updates\n")
+      cat("=== END DEBUG ===\n")
+      return(NULL)
+    }
+    
+    avg_data <- get_average_spin_info(
+      pitch_data, 
+      input$pitcher, 
+      input$pitchType, 
+      input$dateRange
+    )
+    # Debug print
+    cat("=== AVERAGED PITCH DATA DEBUG ===\n")
+    cat("Pitcher:", input$pitcher, "\n")
+    cat("Pitch Type:", input$pitchType, "\n") 
+    cat("Date Range:", as.character(input$dateRange[1]), "to", as.character(input$dateRange[2]), "\n")
+    cat("Averaged data structure:\n")
+    print(str(avg_data))
+    # cat("Averaged data values:\n")
+    # print(avg_data)
+    # cat("=== END DEBUG ===\n")
+    
+    return(avg_data)
+  })
   
-  calculate_expected_vert_break <- function(spin_vector_x, spin_vector_y, spin_vector_z, ball_x, ball_y, pitch_data) {
-    return("")
-  }
-  calculate_expected_horz_break <- function(spin_vector_x, spin_vector_y, spin_vector_z, ball_x, ball_y, pitch_data) {
-    return("")
-  }
-  calculate_expected_spin_direction <- function(spin_vector_x, spin_vector_y, spin_vector_z, ball_x, ball_y, pitch_data) {
-    return("")
-  }
-  calculate_expected_spin_efficiency <- function(spin_vector_x, spin_vector_y, spin_vector_z, ball_x, ball_y, pitch_data) {
-    return("")
-  }  
+        
+  filteredData <- reactive({
+    req(input$pitcher, input$pitchType, input$dateRange)
+    
+    pitch_data %>%
+      dplyr::filter(
+        Pitcher == input$pitcher,
+        PitchType == input$pitchType,
+        as.Date(Date) >= input$dateRange[1],
+        as.Date(Date) <= input$dateRange[2]
+      )
+    
+  })
   
+  cat("Filt Data Structure:\n")
+  print(str(filteredData))
   
+  # Upitch type dropdown to show unique pitch types only
   output$pitchTypeUI <- renderUI({
     req(input$pitcher != "")
     
-    pitch_rows <- pitch_data[pitch_data$Pitcher == input$pitcher, ]
+    #  unique pitch types for the selected pitcher
+    pitcher_data <- pitch_data[pitch_data$Pitcher == input$pitcher, ]
+    unique_pitch_types <- unique(pitcher_data$PitchType)
     
-    # Map abbreviations to full names
-    pitch_labels <- sapply(pitch_rows$PitchType, function(pt) abbrevs[[pt]])
+    # Map abbreviations to full pitch types 
+    pitch_labels <- sapply(unique_pitch_types, function(pt) {
+      abbrev_name <- abbrevs[[pt]]
+      if (is.null(abbrev_name)) pt else abbrev_name
+    })
     
     div(style = "margin-top: 10px;",   
-        selectInput("pitch_type", NULL,#"Pitch Type:",
-                    choices = setNames(pitch_rows$PitchUID, pitch_labels),
-                    selected = pitch_rows$PitchUID[1])
+        selectInput("pitchType", NULL,
+                    choices = setNames(unique_pitch_types, pitch_labels),
+                    selected = unique_pitch_types[1])
     )
   })
   
@@ -187,9 +258,9 @@ server <- function(input, output, session) {
     }
   })
   
-  # Reactive stat values 
+  # UPDATED: Use averaged pitch data for stats
   output$velo_value <- renderText({
-    pitch <- current_pitch()
+    pitch <- averaged_pitch_data()
     if (!is.null(pitch)) {
       paste0(round(pitch$start_speed, 1), " mph")
     } else {
@@ -198,7 +269,7 @@ server <- function(input, output, session) {
   })
   
   output$spin_rate_value <- renderText({
-    pitch <- current_pitch()
+    pitch <- averaged_pitch_data()
     if (!is.null(pitch)) {
       paste0(round(pitch$SpinRate, 1), " rpm")
     } else {
@@ -207,7 +278,7 @@ server <- function(input, output, session) {
   })
   
   output$vert_break_value <- renderText({
-    pitch <- current_pitch()
+    pitch <- averaged_pitch_data()
     
     if (!is.null(pitch)) {
       if (user_modified() && !is.null(input$spinTilt_slider) && !is.null(input$spinGyro_slider) && 
@@ -230,7 +301,7 @@ server <- function(input, output, session) {
   })
   
   output$horz_break_value <- renderText({
-    pitch <- current_pitch()
+    pitch <- averaged_pitch_data()
     
     if (!is.null(pitch)) {
       if (user_modified() && !is.null(input$spinTilt_slider) && !is.null(input$spinGyro_slider) && 
@@ -253,7 +324,7 @@ server <- function(input, output, session) {
   })
   
   output$spin_direction_value <- renderText({
-    pitch <- current_pitch()
+    pitch <- averaged_pitch_data()
     
     if (!is.null(pitch)) {
       if (user_modified() && !is.null(input$spinTilt_slider) && !is.null(input$spinGyro_slider) && 
@@ -277,7 +348,7 @@ server <- function(input, output, session) {
   })
   
   output$spin_efficiency_value <- renderText({
-    pitch <- current_pitch()
+    pitch <- averaged_pitch_data()
     
     if (!is.null(pitch)) {
       if (user_modified() && !is.null(input$spinTilt_slider) && !is.null(input$spinGyro_slider) && 
@@ -417,26 +488,27 @@ server <- function(input, output, session) {
     }
   })
   
-  # Initialize sliders with first pitch data
+  # UPDATED: Initialize sliders with averaged data
   observe({
-    if (nrow(pitch_data) > 0) {
-      first_uid <- pitch_data$PitchUID[1]
-      update_sliders_for_pitch(first_uid)
+    pitch_avg <- averaged_pitch_data()
+    if (!is.null(pitch_avg)) {
+      update_sliders_for_averaged_pitch(pitch_avg)
+      current_pitch(pitch_avg)
     }
   })
   
-  # Handle pitch selection
-  observeEvent(input$pitch_type, {
-    req(input$pitch_type)
-    pitch_uid <- input$pitch_type
-    selected_pitch <- get_pitch_by_uid(pitch_uid)
+  # UPDATED: Handle pitch/date selection changes
+  observeEvent(list(input$pitchType, input$dateRange), {
+    req(input$pitcher, input$pitchType, input$dateRange)
     
-    if (!is.null(selected_pitch)) {
-      current_pitch(selected_pitch)
-      session$sendCustomMessage("pitch_uid", pitch_uid)
-      update_sliders_for_pitch(pitch_uid)
+    pitch_avg <- averaged_pitch_data()
+    if (!is.null(pitch_avg)) {
+      current_pitch(pitch_avg)
+      # Send a dummy UID for JavaScript compatibility
+      session$sendCustomMessage("pitch_uid", "averaged_pitch")
+      update_sliders_for_averaged_pitch(pitch_avg)
       
-      # Reset user modification flag on pitch change
+      # Reset user modification flag on selection change
       shinyjs::delay(900, {
         user_modified(FALSE)
       })
@@ -456,40 +528,43 @@ server <- function(input, output, session) {
     session$sendCustomMessage("field_toggle", input$show_field)
   })
   
-  # Handle reset button
+  # UPDATED: Handle reset button with averaged data
   observeEvent(input$reset_btn, {
-    req(input$pitch_type)
-    pitch_uid <- input$pitch_type
-    update_sliders_for_pitch(pitch_uid)
+    req(input$pitcher, input$pitchType, input$dateRange)
     
-    # Force the modification flag to FALSE after reset
-    shinyjs::delay(950, {
-      user_modified(FALSE)
-    })
+    pitch_avg <- averaged_pitch_data()
+    if (!is.null(pitch_avg)) {
+      update_sliders_for_averaged_pitch(pitch_avg)
+      
+      # Force the modification flag to FALSE after reset
+      shinyjs::delay(950, {
+        user_modified(FALSE)
+      })
+    }
   })
   
-  update_sliders_for_pitch <- function(pitch_uid) {
+  # UPDATED: New function to update sliders with averaged pitch data
+  update_sliders_for_averaged_pitch <- function(pitch_avg) {
     resetting(TRUE)
     
-    selected_pitch <- get_pitch_by_uid(pitch_uid)
-    if (is.null(selected_pitch)) return()
+    if (is.null(pitch_avg)) return()
     
-    current_pitch(selected_pitch)
+    current_pitch(pitch_avg)
     
-    spin_x <- selected_pitch$spin_backspin
-    spin_y <- selected_pitch$spin_sidespin
-    spin_z <- -selected_pitch$spin_gyrospin
+    spin_x <- pitch_avg$spin_backspin
+    spin_y <- pitch_avg$spin_sidespin
+    spin_z <- -pitch_avg$spin_gyrospin
     tilt_gyro <- calculate_tilt_gyro_from_vector(spin_x, spin_y, spin_z)
     original_tilt(tilt_gyro$tilt)
     display_tilt <- (360 - tilt_gyro$tilt + 90) %% 360
     
-    seam_lat <- if(!is.null(selected_pitch$seam_orientation_lat) && !is.na(selected_pitch$seam_orientation_lat)) {
-      selected_pitch$seam_orientation_lat
+    seam_lat <- if(!is.null(pitch_avg$seam_orientation_lat) && !is.na(pitch_avg$seam_orientation_lat)) {
+      pitch_avg$seam_orientation_lat
     } else {
       0
     }
-    seam_lon <- if(!is.null(selected_pitch$seam_orientation_lon) && !is.na(selected_pitch$seam_orientation_lon)) {
-      selected_pitch$seam_orientation_lon
+    seam_lon <- if(!is.null(pitch_avg$seam_orientation_lon) && !is.na(pitch_avg$seam_orientation_lon)) {
+      pitch_avg$seam_orientation_lon
     } else {
       0
     }
@@ -532,8 +607,8 @@ server <- function(input, output, session) {
     vals <- list(
       spinTilt = input$spinTilt_slider,
       spinGyro = input$spinGyro_slider,
-      ballX = input$ballX_slider,#((input$ballX_slider - 90 + 180) %% 360) - 180,  # Convert display longitude back to data longitude with wrapping
-      ballY = input$ballY_slider#-input$ballY_slider       # Convert display latitude back to data latitude
+      ballX = input$ballX_slider,
+      ballY = input$ballY_slider
       
     )
     if (!is.null(vals$spinTilt) && !is.null(vals$spinGyro) && !is.null(original_tilt())) {
@@ -566,6 +641,29 @@ server <- function(input, output, session) {
     updateActionButton(session, "play_pause_btn", label = ifelse(new_state, "Pause", "Play"))
     session$sendCustomMessage("play_toggle", new_state)
   })
+  # 
+  # output$debug_avg_data <- renderText({
+  #   pitch <- averaged_pitch_data()
+  #   if (!is.null(pitch)) {
+  #     # Create horizontal display of key values
+  #     values <- c(
+  #       paste0("avg spin_backspin: ", round(pitch$spin_backspin, 2)),
+  #       paste0("avg spin_sidespin: ", round(pitch$spin_sidespin, 2)),
+  #       paste0("avg spin_gyrospin: ", round(pitch$spin_gyrospin, 2)),
+  #       paste0("avg start_speed: ", round(pitch$start_speed, 1)),
+  #       paste0("avg SpinRate: ", round(pitch$SpinRate, 0)),
+  #       paste0("avg break_z: ", round(pitch$break_z, 2)),
+  #       paste0("avg break_x: ", round(pitch$break_x, 2)),
+  #       paste0("avg SpinAxis_inf: ", round(pitch$SpinAxis_inf, 1)),
+  #       paste0("avg spin_efficiency: ", round(pitch$spin_efficiency, 3)),
+  #       paste0("avg seam_lat: ", round(pitch$seam_orientation_lat, 1)),
+  #       paste0("avg seam_lon: ", round(pitch$seam_orientation_lon, 1))
+  #     )
+  #     paste(values, collapse = " | ")
+  #   } else {
+  #     "No data available (invalid pitcher/pitch type combination)"
+  #   }
+  # })
 }
 
 shinyApp(ui, server)
