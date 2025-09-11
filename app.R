@@ -45,6 +45,9 @@ ui <- fluidPage(
       Shiny.addCustomMessageHandler('field_toggle', function(showField) {
         window.postMessage({ type: 'field_toggle', value: showField }, '*');
       });
+      Shiny.addCustomMessageHandler('rod_toggle', function(showRod) {
+        window.postMessage({ type: 'rod_toggle', value: showRod }, '*');
+      });
     ")),
     
   ),
@@ -100,7 +103,8 @@ ui <- fluidPage(
     # show clock button
     div(class = "compact-checkbox", style = "text-align: center;",
         checkboxInput("show_clock", "Show Clock", value = TRUE),
-        checkboxInput("show_field", "Show Field", value = TRUE)
+        checkboxInput("show_field", "Show Field", value = TRUE),
+        checkboxInput("show_rod", "Show Rod", value = TRUE)
         
     ),
     
@@ -462,6 +466,10 @@ server <- function(input, output, session) {
   
   observeEvent(input$show_field, {
     session$sendCustomMessage("field_toggle", input$show_field)
+  })
+  
+  observeEvent(input$show_rod, {
+    session$sendCustomMessage("rod_toggle", input$show_rod)
   })
 }
 
