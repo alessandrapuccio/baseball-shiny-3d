@@ -4,7 +4,6 @@ load_pitch_data <- function() {
   
   for (path in paths) {
     if (file.exists(path)) {
-      message("Loading pitch data from: ", path)
       return(fromJSON(readLines(path, warn = FALSE)))
     }
   }

@@ -62,6 +62,28 @@ ui <- fluidPage(
     div(class = "control-section pitch-controls",
         h5("SELECT PITCH", class = "section-title"),
         
+        ## data view OPT or AVG
+        div(class = "data-view-select",
+            div(
+              style = "display: flex; align-items: center; margin-bottom: -19px; margin-top: -5px;",
+              tags$label(
+                "Data View:", 
+                style = "margin-right: 10px; font-weight: bold; font-size:14px;white-space: nowrap; margin-bottom: 0; position: relative; top: -7px;"
+              ),
+              selectInput("dataView", NULL,
+                          choices = c("Averages" = "pitches", "Optimal" = "optimal"),
+                          selected = "pitches",
+                          width = "120px"),
+              conditionalPanel(
+                condition = "input.dataView == 'optimal'",
+                selectInput("batterSide", NULL,
+                            choices = c("Vs Right" = "Right", "Vs Left" = "Left"),
+                            selected = "Right",
+                            width = "100px")
+              )
+            )
+        ),
+        
         div(class = "pitch-select",
             # Pitcher selector
             selectInput("pitcher", "Select Pitcher and Pitch Type:",
@@ -71,16 +93,20 @@ ui <- fluidPage(
             # Pitch type selector (dynamic based on pitcher)
             uiOutput("pitchTypeUI"),
             
-            div(
-              style = "margin-top: 10px;",  # Adjust the value as needed
-              dateRangeInput(
-                "dateRange", 
-                "Select Date Range:",
-                start = min(as.Date(pitch_data$Date)),
-                end   = max(as.Date(pitch_data$Date)),
-                format = "yyyy-mm-dd",
-                startview = "month",
-                separator = " to "
+            #  Date picker disspears if you select optimal so it gets the best average? 
+            conditionalPanel(
+              condition = "input.dataView == 'pitches'",
+              div(
+                style = "margin-top: 10px;",
+                dateRangeInput(
+                  "dateRange", 
+                  "Select Date Range:",
+                  start = min(as.Date(pitch_data$Date)),
+                  end   = max(as.Date(pitch_data$Date)),
+                  format = "yyyy-mm-dd",
+                  startview = "month",
+                  separator = " to "
+                )
               )
             )
         ),
@@ -169,22 +195,25 @@ server <- function(input, output, session) {
   
   # Main data reactive - this replaces both averaged_pitch_data and filteredData
   pitch_analysis_data <- reactive({
-    req(input$pitcher, input$pitchType, input$dateRange)
-    
+    req(input$pitcher, input$pitchType, input$dataView, input$dateRange)
+
     # Validate pitch type exists for pitcher
     valid_pitch_types <- unique(pitch_data[pitch_data$Pitcher == input$pitcher, "PitchType"])
     if (!input$pitchType %in% valid_pitch_types) return(NULL)
-    
+
     # Get averaged data (this was your averaged_pitch_data)
     avg_data <- get_average_spin_info(
-      pitch_data, 
-      input$pitcher, 
-      input$pitchType, 
-      input$dateRange
+      pitch_data,
+      input$pitcher,
+      input$pitchType,
+      input$dateRange,
+      input$dataView,
+      input$batterSide
     )
-    
+
     return(avg_data)
   })
+
   
   # Dynamic pitch type UI
   output$pitchTypeUI <- renderUI({
@@ -320,11 +349,9 @@ server <- function(input, output, session) {
   create_slider_sync("ballX")
   create_slider_sync("ballY")
   
-  # CONSOLIDATED: Main pitch data change handler
-  # Handle pitcher changes separately to ensure clean state
+  # CONSOLIDATE Main pitch data change handler
   observeEvent(input$pitcher, {
-    # updateSelectInput(session, "pitchType", choices = character(0), selected = NULL)
-    
+
     # Reset states immediately when pitcher changes
     playing(FALSE)
     updateActionButton(session, "play_pause_btn", label = "Play")
@@ -332,9 +359,27 @@ server <- function(input, output, session) {
     user_modified(FALSE)
   }, ignoreInit = TRUE)
   
+  ## toggle off date picker if optimal is selected
+  observeEvent(input$dataView, {
+    if (input$dataView == "optimal") {
+      # Clear the date range when optimal is selected
+      updateDateRangeInput(session, "dateRange", 
+                           start = as.Date("2000-01-01"),
+                           end = Sys.Date())
+    } else {
+      # Reset to full range when switching back to pitches
+      updateDateRangeInput(session, "dateRange", 
+                           start = min(as.Date(pitch_data$Date)),
+                           end = max(as.Date(pitch_data$Date)))
+    }
+  })
+  
   # Handle pitch type and date range changes
-  observeEvent(list(input$pitchType, input$dateRange), {
-    req(input$pitcher, input$pitchType, input$dateRange)
+  observeEvent(list(input$pitchType, input$dateRange, input$dataView, input$batterSide), {
+    req(input$pitcher, input$pitchType, input$dataView)
+    # if (input$dataView == "pitches") {
+    #   req(input$dateRange)
+    # }
     
     pitch_data <- pitch_analysis_data()
     if (!is.null(pitch_data)) {
@@ -343,7 +388,7 @@ server <- function(input, output, session) {
       update_sliders_for_pitch(pitch_data)
       
       # Reset states
-      shinyjs::delay(900, { user_modified(FALSE) })
+      shinyjs::delay(800, { user_modified(FALSE) })
       playing(FALSE)
       updateActionButton(session, "play_pause_btn", label = "Play")
       session$sendCustomMessage("play_toggle", FALSE)
@@ -374,7 +419,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # CONSOLIDATED: Slider value updates to JavaScript
+  # CONSOLIDATE Slider value updates to JavaScript
   observe({
     vals <- list(
       spinTilt = input$spinTilt_slider,
@@ -394,7 +439,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # SIMPLIFIED: Update sliders function
+  #  Update sliders function
   update_sliders_for_pitch <- function(pitch_data) {
     resetting(TRUE)
     if (is.null(pitch_data)) return()

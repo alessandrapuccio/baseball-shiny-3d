@@ -12728,7 +12728,7 @@ function U0() {
 function M0({ spinRate: o, playing: l, spinAxis: p, currentSeamLat: m, currentSeamLon: u, useSeamOrientation: n, resetSpin: s, showRod: c }) {
   const f = Qo(
     sv,
-    "/models/baseball-v2.glb",
+    "models/baseball-v2.glb",
     (E) => {
       E.setMeshoptDecoder(dv);
     }
@@ -12769,7 +12769,7 @@ function M0({ spinRate: o, playing: l, spinAxis: p, currentSeamLat: m, currentSe
 function D0() {
   const [o, l] = Na(!0), [p, m] = Na(!0), [u, n] = Na(!0), [s, c] = Na([]), [f, d] = Na(null), [v, y] = Na(!1), [g, E] = Na(new Le.Vector3(1, 0, 0)), [_, M] = Na(0), [D, A] = Na(0), [b, z] = Na(!1);
   _a(() => {
-    fetch("/averaging_pitch_data.json").then((B) => B.json()).then((B) => {
+    fetch("averaging_pitch_data.json").then((B) => B.json()).then((B) => {
       c(B || []), B && B.length > 0 && d(B[0].PitchUID);
     });
   }, []), _a(() => {

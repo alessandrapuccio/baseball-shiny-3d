@@ -5,9 +5,9 @@ account: seattlemariners
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 15356077
-bundleId: 10889411
+bundleId: 10894819
 url: https://seattlemariners.shinyapps.io/baseball-shiny-3d-v2/
 version: 1
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: 2app.R
+ignoredFiles: old_helpers_goal_two.R|optimal_seams.csv|optimal_seams.json

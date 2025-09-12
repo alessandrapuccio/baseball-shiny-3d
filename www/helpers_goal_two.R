@@ -1,5 +1,16 @@
 library(mclust)
 
+load_opt_data <- function() {
+  paths <- c("www/optimal_seams.json", "optimal_seams.json")
+  
+  for (path in paths) {
+    if (file.exists(path)) {
+      return(fromJSON(readLines(path, warn = FALSE)))
+    }
+  }
+  stop("Fix the opt path ")
+}
+
 deg2rad = function(x) {
   x * pi/180
 }
@@ -9,8 +20,8 @@ rad2deg = function(x) {
 }
 
 
-get_average_spin_info <- function(data, pitcher, pitch_type, date_range = NULL) {
-
+get_average_spin_info <- function(data, pitcher, pitch_type, date_range = NULL, dataView = "pitches",  batterSide = "Right") {
+  
   filtered_data <- data %>%
     filter(Pitcher == pitcher, PitchType == pitch_type)
   
@@ -34,16 +45,47 @@ get_average_spin_info <- function(data, pitcher, pitch_type, date_range = NULL) 
       spin_efficiency  = mean(spin_efficiency, na.rm = TRUE)
     )
   
-  
-  dominant_seam <- get_dominant_seam_orientation(filtered_data)
-  
-  print(dominant_seam)
-  
-  # Combine averages and dominant seam orientation into a single dictionary
   result <- as.list(avg_values)
-  result$seam_orientation_lat <- dominant_seam$seam_orientation_lat
-  result$seam_orientation_lon <- dominant_seam$seam_orientation_lon
   
+  # get seams by clustering over the date range
+  if (dataView == "pitches") {
+    dominant_seam <- get_dominant_seam_orientation(filtered_data)
+    print(dominant_seam)
+    
+    if (!is.null(dominant_seam)) {
+      result$seam_orientation_lat <- dominant_seam$seam_orientation_lat
+      result$seam_orientation_lon <- dominant_seam$seam_orientation_lon
+    } else {
+      result$seam_orientation_lat <- 0
+      result$seam_orientation_lon <- 0
+    }
+  }
+  
+  # pull opt seams from data
+  else if (dataView == "optimal") {
+    opt_seams <- load_opt_data()
+  
+    
+    filtered_opt <- subset(opt_seams,
+                           Pitcher == pitcher &
+                             Pitch.Type == pitch_type &
+                             Bat.Side == batterSide)
+    
+    if (nrow(filtered_opt) > 0) {
+      row <- filtered_opt[1, ]  # take first row
+      result$seam_orientation_lat <- row$Optimal.Latitude
+      result$seam_orientation_lon <- row$Optimal.Longitude
+      result$break_z <- row$Optimal.Ind.Vert.Break
+      result$break_x <- row$Optimal.Horz.Break
+      result$opt_action <- row$Optimal.Action.fxwOBA
+    } else {
+      warning("No optimal seam data found")
+      result$seam_orientation_lat <- 0
+      result$seam_orientation_lon <- 0
+    }
+  }
+  print(paste0("RESULTSSSS V ", batterSide))
+  print(result)
   return(result)
 }
 
